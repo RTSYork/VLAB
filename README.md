@@ -62,7 +62,7 @@ The relay server is tested on Ubuntu Linux, but should work on similar operating
 git clone https://github.com/RTSYork/VLAB
 ```
 
-First, you need to edit `vlab.conf`. This file describes the FPGA boards in your lab and the users who can access them. This is described in more detail [here](#vlabconf).
+First, you need to edit `vlab.conf`. This file describes the FPGA boards in your lab and the users who can access them. This is described in more detail [here](#configuration).
 
 You then need to set up ssh keypairs for use inside the VLAB. To do this run:
 
@@ -174,7 +174,7 @@ To add information about how to do this.
 @@@@@@@@@@
 
 
-## <a href="vlabconf"></a>Configuration
+## Configuration
 
 The VLAB is configured by `vlab.conf`, which describes two things:
 
