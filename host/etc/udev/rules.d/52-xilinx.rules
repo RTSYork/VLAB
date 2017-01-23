@@ -1,0 +1,8 @@
+# Rules to load Xilinx Platform Cable firmwares
+ATTR{idVendor}=="03fd", ATTR{idProduct}=="0008", MODE="666"
+SUBSYSTEM=="usb", ACTION=="add", ATTR{idVendor}=="03fd", ATTR{idProduct}=="0007", RUN+="/sbin/fxload -v -t fx2 -I /opt/Xilinx/firmware/xusbdfwu.hex -D $tempnode"
+SUBSYSTEM=="usb", ACTION=="add", ATTR{idVendor}=="03fd", ATTR{idProduct}=="0009", RUN+="/sbin/fxload -v -t fx2 -I /opt/Xilinx/firmware/xusb_xup.hex -D $tempnode"
+SUBSYSTEM=="usb", ACTION=="add", ATTR{idVendor}=="03fd", ATTR{idProduct}=="000d", RUN+="/sbin/fxload -v -t fx2 -I /opt/Xilinx/firmware/xusb_emb.hex -D $tempnode"
+SUBSYSTEM=="usb", ACTION=="add", ATTR{idVendor}=="03fd", ATTR{idProduct}=="000f", RUN+="/sbin/fxload -v -t fx2 -I /opt/Xilinx/firmware/xusb_xlp.hex -D $tempnode"
+SUBSYSTEM=="usb", ACTION=="add", ATTR{idVendor}=="03fd", ATTR{idProduct}=="0013", RUN+="/sbin/fxload -v -t fx2 -I /opt/Xilinx/firmware/xusb_xp2.hex -D $tempnode"
+SUBSYSTEM=="usb", ACTION=="add", ATTR{idVendor}=="03fd", ATTR{idProduct}=="0015", RUN+="/sbin/fxload -v -t fx2 -I /opt/Xilinx/firmware/xusb_xse.hex -D $tempnode"

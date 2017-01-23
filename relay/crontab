@@ -1,0 +1,2 @@
+* * * * * root /vlab/checkboards.py -s -k -v >> /var/log/vlab.log 2>&1
+

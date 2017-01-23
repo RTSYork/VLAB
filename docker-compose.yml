@@ -1,0 +1,19 @@
+version: '2'
+
+services:
+  web:
+    image: vlab/web
+    ports:
+      - "5000:5000"
+    links:
+      - relay
+
+  relay:
+    image: vlab/relay
+    ports:
+      - "6379:6379"
+      - "2222:22"
+    volumes:
+      - "./vlab.conf:/vlab/vlab.conf"
+      - "./keys:/vlab/keys/"
+      - "./log:/vlab/log/"

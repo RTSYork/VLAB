@@ -1,0 +1,1 @@
+* * * * * root /opt/VLAB/boardscan.sh >> /opt/VLAB/log/boardscan.log 2>&1
