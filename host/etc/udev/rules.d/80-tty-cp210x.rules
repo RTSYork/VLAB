@@ -2,8 +2,8 @@
 ACTION=="add", ATTRS{idVendor}=="10c4", ATTRS{idProduct}=="ea60", SUBSYSTEM=="tty", SYMLINK+="vlab/00000000$env{ID_SERIAL_SHORT}/tty", MODE="0666"
 
 # Start board server - this will only succeed once as it requires both symlinks to be present first
-ACTION=="add", ATTRS{idVendor}=="10c4", ATTRS{idProduct}=="ea60", SUBSYSTEM=="tty", RUN+="/bin/sh -c '/usr/bin/python3 /opt/VLAB/host/boardconnected.py 00000000$env{ID_SERIAL_SHORT} localhost >> /opt/VLAB/log/attachdetach.log 2>&1'"
+ACTION=="add", ATTRS{idVendor}=="10c4", ATTRS{idProduct}=="ea60", SUBSYSTEM=="tty", RUN+="/bin/sh -c '/usr/bin/python3 /opt/VLAB/boardconnected.py 00000000$env{ID_SERIAL_SHORT} localhost >> /opt/VLAB/log/attachdetach.log 2>&1'"
 
 # Fire when CP210x USB device is removed, but not when a tty (note ENV rather than ATTR)
-ACTION=="remove", ENV{ID_VENDOR_ID}=="10c4", ENV{ID_MODEL_ID}=="ea60", SUBSYSTEM!="tty", RUN+="/bin/sh -c '/usr/bin/python3 /opt/VLAB/host/boarddetached.py 00000000$env{ID_SERIAL_SHORT} localhost >> /opt/VLAB/log/attachdetach.log 2>&1'"
+ACTION=="remove", ENV{ID_VENDOR_ID}=="10c4", ENV{ID_MODEL_ID}=="ea60", SUBSYSTEM!="tty", RUN+="/bin/sh -c '/usr/bin/python3 /opt/VLAB/boarddetached.py 00000000$env{ID_SERIAL_SHORT} localhost >> /opt/VLAB/log/attachdetach.log 2>&1'"
 

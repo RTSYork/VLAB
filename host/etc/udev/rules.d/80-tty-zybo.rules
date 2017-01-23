@@ -4,6 +4,6 @@
 ACTION=="add", ATTRS{idVendor}=="0403", ATTRS{manufacturer}=="Digilent", SUBSYSTEM=="tty", SYMLINK+="vlab/%s{serial}/tty", MODE="0666"
 
 # Start board server - this will only succeed once as it requires both symlinks to be present first
-ACTION=="add", ATTRS{idVendor}=="0403", ATTRS{manufacturer}=="Digilent", SUBSYSTEM=="tty", RUN+="/bin/sh -c '/usr/bin/python3 /opt/VLAB/host/boardconnected.py %s{serial} localhost >> /opt/VLAB/log/attachdetach.log 2>&1'"
+ACTION=="add", ATTRS{idVendor}=="0403", ATTRS{manufacturer}=="Digilent", SUBSYSTEM=="tty", RUN+="/bin/sh -c '/usr/bin/python3 /opt/VLAB/boardconnected.py %s{serial} localhost >> /opt/VLAB/log/attachdetach.log 2>&1'"
 
 # No remove rule is needed, as JTAG will also be removed at the same time

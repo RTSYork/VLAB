@@ -3,20 +3,23 @@
 # This script installs the necessary files to set up a VLAB board host.
 # It must be executed with administrative privileges.
 
+echo "Installing files..."
 
-INSTALL_DIR=/opt/VLAB/
-
-mkdir -p $INSTALL_DIR
-
-#Copy the contents of all subdirectories to the filesystem
+# Copy the contents of all subdirectories to /
 for f in *; do
 	if [ -d $f ]; then
-		cp -r $f/* /$f
+		cp -rv $f/* /$f
 	fi
 done
 
-echo "Install completed.
+echo "
+Install completed.
 You can test by connecting a supported FPGA and checking that the boardserver 
 container is created. Plug in the device and run:
     docker ps
+
+Errors will be logged to:
+    /opt/VLAB/log/attachdetach.log and
+    /opt/VLAB/log/boardscan.log
 "
+
