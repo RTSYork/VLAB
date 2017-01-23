@@ -14,6 +14,9 @@ done
 
 echo "
 Install completed.
+
+Now set the relay server hostname and port in /opt/VLAB/boardhost.conf
+
 You can test by connecting a supported FPGA and checking that the boardserver 
 container is created. Plug in the device and run:
     docker ps
@@ -22,4 +25,3 @@ Errors will be logged to:
     /opt/VLAB/log/attachdetach.log and
     /opt/VLAB/log/boardscan.log
 "
-

@@ -6,24 +6,49 @@ This script is invoked by udev when a board is removed.
 Ian Gray, 2016
 """
 
-import os, sys, subprocess, logging
+import os, sys, subprocess, logging, json
 import redis
+
+CONFIGFILE='/opt/VLAB/boardhost.conf'
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s ; %(levelname)s ; %(name)s ; %(message)s')
 log = logging.getLogger(os.path.basename(sys.argv[0]))
 
 
-if len(sys.argv) < 3:
-	print("Usage: {} {{serial number}} {{redis server}}".format(sys.argv[0]))
+if len(sys.argv) < 2:
+	print("Usage: {} {{serial number}}".format(sys.argv[0]))
 	sys.exit(1)
 
 serial = sys.argv[1]
-redisserver = sys.argv[2]
 
 log.info("Board serial {} detached. Deregistering...".format(serial))
 
+
+redisserver = "localhost"
+redisport = 6379
+
+# Open the config file and parse it
 try:
-	db = redis.StrictRedis(host=redisserver, port=6379, db=0, decode_responses=True)
+	with open(CONFIGFILE) as f:
+		f_no_comments = ""
+		for line in f:
+			ls = line.strip()
+			if len(ls) > 0 and ls[0] != '#':
+				f_no_comments = f_no_comments + ls + "\n"
+		config = json.loads(f_no_comments)
+		if 'server' in config:
+			redisserver = config['server']
+		if 'port' in config:
+			redisport = config['port']
+		log.info("{} parsed successfully; using server ({}:{})".format(CONFIGFILE, redisserver, redisport))
+except ValueError as e:
+	log.info("Error parsing config file `{}`; using default server ({}:{}).".format(CONFIGFILE, redisserver, redisport))
+except FileNotFoundError as e:
+	log.info("Cannot find config file `{}`; using default server ({}:{}).".format(CONFIGFILE, redisserver, redisport))
+
+
+try:
+	db = redis.StrictRedis(host=redisserver, port=redisport, db=0, decode_responses=True)
 	db.ping()
 except redis.exceptions.ConnectionError as e:
 	log.critical("Error whilst connecting to host {}\n{}".format(redisserver, e))
