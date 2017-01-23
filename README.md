@@ -32,7 +32,7 @@ These containers can be hosted on any physical server, and may be all the same s
 
 ## Client Installation and Use
 
-The client script can be downloaded directly from [Github](https://github.com/RTSYork/VLAB). It has no external dependencies, apart from [Python 3](https://www.python.org/downloads/) itself. 
+The client script (`vlab.py`) can be downloaded directly from [Github](https://raw.githubusercontent.com/RTSYork/VLAB/master/vlab.py). It has no external dependencies, apart from [Python 3](https://www.python.org/downloads/) itself. 
 
 To use the client you must have a keyfile which should have been sent to the client by the VLAB administrator. Connect to the VLAB using:
 
