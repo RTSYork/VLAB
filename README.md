@@ -123,6 +123,17 @@ This line says that port 22 in the container should be mapped to port 2222 on th
 
 ### Board Host Installation
 
+#### Prerequisites
+
+As well as Docker, the board host server depends on Python 3 and the 'redis' package, and certain FPGA configurations require the fxload firmware downloader and libusb.
+
+From a standard Ubuntu Server 16.04 installation, these can be installed with:
+```
+sudo apt install fxload libusb-dev python3-redis
+```
+
+#### Installation
+
 As described previously, board hosts are the servers to which the actual FPGA boards are connected. There can be multiple board hosts, and can be the same machine that the relay server is running. udev rules recognise when FPGAs are attached and instances of the `boardserver` container are launched to serve it. 
 
 To set up a board host, first send the boardserver Docker image from where you built it to the new board host:
