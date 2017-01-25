@@ -120,7 +120,7 @@ hostport = int(hostport.split(":")[1])
 
 
 # Set up a cron inside the container to reregister itself periodically
-cmd = 'echo \* \* \* \* \* \* python3 /vlab/register.py {} {} {} {} > /etc/cron.d/vlab-cron'.format(serial, socket.gethostname(), hostport, redisserver)
+cmd = 'echo \* \* \* \* \* root /usr/bin/python3 /vlab/register.py {} {} {} {} > /etc/cron.d/vlab-cron'.format(serial, socket.gethostname(), hostport, redisserver)
 s = subprocess.check_output(['docker', 'exec', containername, '/bin/sh', '-c', cmd])
 
 # Finally, we register our new board with the redis server ourselves as well
