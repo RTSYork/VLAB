@@ -125,14 +125,6 @@ s = subprocess.check_output(['docker', 'exec', containername, '/bin/sh', '-c', c
 
 # Finally, we register our new board with the redis server ourselves as well
 
-# Get our IP address
-# We use this method because on machines with multiple interfaces this will get the one used for external routes
-soc = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-soc.connect(("8.8.8.8", 22)) #This can be any IP address that is not on your local LAN
-ip = soc.getsockname()[0]
-soc.close()
-
-
 # Set up our boardclass
 db.sadd("vlab:boardclasses", bclass)
 db.sadd("vlab:boardclass:{}:boards".format(bclass), serial)
@@ -140,7 +132,7 @@ db.sadd("vlab:boardclass:{}:unlockedboards".format(bclass), serial)
 
 # Set up our board with details provided. Remove any locks.
 db.set("vlab:board:{}:user".format(serial), "root")
-db.set("vlab:board:{}:server".format(serial), ip)
+db.set("vlab:board:{}:server".format(serial), socket.gethostname())
 db.set("vlab:board:{}:port".format(serial), hostport)
 db.delete("vlab:board:{}:lock:username".format(serial))
 db.delete("vlab:board:{}:lock:time".format(serial))
