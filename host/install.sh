@@ -12,6 +12,8 @@ for f in *; do
 	fi
 done
 
+chmod 777 /opt/VLAB/log/*.log
+
 echo "
 Install completed.
 
