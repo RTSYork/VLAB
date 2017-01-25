@@ -5,6 +5,18 @@ app = Flask(__name__)
 
 REDIS_HOST = "relay"
 
+
+def getBoardDetails(db, b, details):
+	'''
+	Return a dict of key values fetched about the board named b. 'details' is a list of
+	key names to fetch.
+	'''
+	rv = {}
+	for detail in details:
+		rv[detail] = db.get("vlab:board:{}:{}".format(b, detail))
+	return rv
+
+
 @app.after_request
 def add_header(response):
 	"""
