@@ -61,7 +61,7 @@ print("Using tunnel port {}".format(ephemeralport))
 
 
 # Now create the actual connection
-sshcmd = "ssh -L {}:localhost:{} -i {} -p {} -tt {}@{} {}:{}".format(
+sshcmd = "ssh -L {}:localhost:{} -o \"StrictHostKeyChecking no\" -i {} -p {} -tt {}@{} {}:{}".format(
 	parsed.localport[0], 
 	ephemeralport, 
 	parsed.key[0], 

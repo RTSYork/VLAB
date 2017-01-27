@@ -100,7 +100,7 @@ keyfile = "{}{}".format(KEYS_DIR, "id_rsa")
 target = "{}@{}".format(boarddetails['user'], boarddetails['server'])
 cmd = "screen /dev/ttyFPGA 115200"
 
-sshcmd = "ssh {} -i {} -p {} -tt {} {}".format(tunnel, keyfile, boarddetails['port'], target, cmd)
+sshcmd = "ssh {} -o \"StrictHostKeyChecking no\" -i {} -p {} -tt {} {}".format(tunnel, keyfile, boarddetails['port'], target, cmd)
 
 print("SSH to board server: {}".format(sshcmd))
 
