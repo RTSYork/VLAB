@@ -99,7 +99,7 @@ tunnel = "-L {}:localhost:3121".format(tunnelport)
 keyfile = "{}{}".format(KEYS_DIR, "id_rsa")
 target = "{}@{}".format(boarddetails['user'], boarddetails['server'])
 screenrc = "defhstatus \\\"{} (VLAB)\\\"\\ncaption always\\ncaption string \\\"VLAB shell connected to {} on {}\\\"".format(boardclass, boardclass, boarddetails['server'])
-cmd = "echo -e '{}' > /vlab/vlabscreenrc; screen -c /vlab/vlabscreenrc -qdRR - /dev/ttyFPGA; killall screen".format(screenrc)
+cmd = "echo -e '{}' > /vlab/vlabscreenrc; screen -c /vlab/vlabscreenrc -qdRR - /dev/ttyFPGA 115200; killall -q screen".format(screenrc)
 
 sshcmd = "ssh {} -o \"StrictHostKeyChecking no\" -i {} -p {} -tt {} \"{}\"".format(tunnel, keyfile, boarddetails['port'], target, cmd)
 
