@@ -5,7 +5,13 @@ FROM vlab/vlabcommon
 ARG HWFILE
 
 #Prerequisites
-RUN apt-get install -y gcc-multilib openjdk-7-jre libxtst6 screen
+RUN apt-get install -y gcc-multilib openjdk-8-jre libxtst6 screen
+
+#Set locales to US to keep the Xilinx tools happy
+RUN locale-gen en_US.UTF-8  
+ENV LANG en_US.UTF-8  
+ENV LANGUAGE en_US:en  
+ENV LC_ALL en_US.UTF-8 
 
 #Install the Xilinx hardware server
 ADD "${HWFILE}.tar.gz" /root/
@@ -18,9 +24,13 @@ ADD authorized_keys /root/.ssh/
 RUN chmod 700 /root/.ssh
 RUN chmod 600 /root/.ssh/authorized_keys
 
+#Prevent locales from being forwarded to the boardserver
+ADD sshd_config /etc/ssh/
+
 #Scripts
 ADD supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 ADD *.py /vlab/
+ADD *.tcl /vlab/
 
 EXPOSE 22 
 

@@ -95,8 +95,12 @@ if not debug:
 # We also map into the container the USB device of the FPGA and the TTY device
 # We have to map the realpath of the USB device symlink because of a bug in Docker when mapping symlinks
 # It doesn't matter where we map the USB device, as the Xilinx hw server searches the entire bus range
+# Also, if the Xilinx command line tools are located at /opt/VLAB/xsct they are mapped into the container
 if not debug:
-	mapping_arguments = ["-p", "22", "--device", "{}".format(os.path.realpath(device_node)), "--device", "{}:/dev/ttyFPGA".format(os.path.realpath(tty_node))]
+	mapping_arguments = ["-p", "22", 
+		"--device", "{}".format(os.path.realpath(device_node)), 
+		"--device", "{}:/dev/ttyFPGA".format(os.path.realpath(tty_node)),
+		"-v", "/opt/VLAB/xsct/:/opt/xsct"]
 else:
 	mapping_arguments = ["-p", "22"]
 
