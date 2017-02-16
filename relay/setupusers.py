@@ -125,6 +125,8 @@ for board in config['boards'].keys():
 	db.sadd("vlab:knownboards", board)
 	db.set("vlab:knownboard:{}:class".format(board), config['boards'][board]['class'])
 	db.set("vlab:knownboard:{}:type".format(board), config['boards'][board]['type'])
+	if 'reset' in config['boards'][board]:
+		db.set("vlab:knownboard:{}:reset".format(board), config['boards'][board]['reset'])
 
 
 # And finally our free port number
