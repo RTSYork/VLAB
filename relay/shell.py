@@ -112,6 +112,6 @@ unlockBoard(db, board, boardclass)
 
 cmd = "/opt/xsct/SDK/2016.4/bin/xsdb /vlab/reset.tcl"
 sshcmd = "ssh -o \"StrictHostKeyChecking no\" -i {} -p {} {} \"{}\"".format(keyfile, boarddetails['port'], target, cmd)
-print("Resetting board: {}".format(sshcmd))
+print("Resetting board.")
 os.system(sshcmd)
 
