@@ -1,3 +1,3 @@
 connect
 targets 1
-rst
+rst -system
