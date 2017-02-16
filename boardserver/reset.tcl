@@ -1,3 +1,3 @@
-connect -url localhost 
-target 0
+connect
+targets 1
 rst
