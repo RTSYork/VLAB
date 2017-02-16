@@ -97,10 +97,11 @@ boarddetails = getBoardDetails(db, board, ["user", "server", "port"])
 # All done. Prepare the bounce command
 tunnel = "-L {}:localhost:3121".format(tunnelport)
 keyfile = "{}{}".format(KEYS_DIR, "id_rsa")
-target = "{}@{}".format(boarddetails['user'], boarddetails['server'])
-cmd = "screen /dev/ttyFPGA 115200"
+target = "root@{}".format(boarddetails['server'])
+screenrc = "defhstatus \\\"{} (VLAB)\\\"\\ncaption always\\ncaption string \\\"VLAB shell connected to {} on {}\\\"".format(boardclass, boardclass, boarddetails['server'])
+cmd = "echo -e '{}' > /vlab/vlabscreenrc; screen -c /vlab/vlabscreenrc -qdRR - /dev/ttyFPGA 115200; killall -q screen".format(screenrc)
 
-sshcmd = "ssh {} -o \"StrictHostKeyChecking no\" -i {} -p {} -tt {} {}".format(tunnel, keyfile, boarddetails['port'], target, cmd)
+sshcmd = "ssh {} -o \"StrictHostKeyChecking no\" -i {} -p {} -tt {} \"{}\"".format(tunnel, keyfile, boarddetails['port'], target, cmd)
 
 print("SSH to board server: {}".format(sshcmd))
 
