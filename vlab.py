@@ -23,7 +23,7 @@ def err(s):
 	sys.exit(1)
 
 parser = argparse.ArgumentParser(description="VLAB client script")
-parser.add_argument('-r', '--relay', nargs=1, default=["winston"], help="The hostname of the relay server.")
+parser.add_argument('-r', '--relay', nargs=1, default=["rts001.cs.york.ac.uk"], help="The hostname of the relay server.")
 parser.add_argument('-p', '--port', nargs=1, default=["2222"], help="The ssh port of the relay server to connect to.")
 parser.add_argument('-l', '--localport', nargs=1, default=["12345"], help="Local port to forward connections to.")
 
