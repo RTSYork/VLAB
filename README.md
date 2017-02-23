@@ -221,3 +221,28 @@ The VLAB is configured by `vlab.conf`, which describes two things:
 In this example there is one board with a serial number `exampleboardserialnumber` assigned to the boardclass `boardclass_a`. `"type"` in the board definition is a string used to tell the VLAB which drivers are required to interact with the board. Currently `"type"` is not used because all supported boards can be served from the same container.
 
 
+## Resetting boards on disconnect
+When a user disconnects from an FPGA their design will remain active. The VLAB also supports shutting down a hosted FPGA when the user disconnects. This can be useful if, for example, the board is connected to an Ethernet network and so it is not desirable to have designs active when they are not being tested.
+
+Resetting the boards requires that the `relay` container has access to the Xilinx command line tools. These can be installed by installing [Xilinx SDK](https://www.xilinx.com/products/design-tools/embedded-software/sdk.html) and choosing `XSCT`. 
+
+Once installed, create a symlink called `xsct` in the VLAB install folder which points to the SDK Xilinx install folder. For example (change if your install paths are non-default):
+
+    ln -s /opt/Xilinx/SDK/2016.4 /opt/VLAB/xsct 
+
+Then add `"reset: "true"` to the board definition in `vlab.conf`. For example
+
+```
+"boards": {
+		"210279777433": {"class": "vlab_zybo", "type": "zybo", "reset": "true"}
+}
+```
+
+Now when a user disconnects from the defined board, a full system reset will be issued, and in the case of Zynq-based boards the ARM cores shut down.
+
+
+## Common Issues
+
+### Asking for root password when relay connects to the boardserver
+This happens when the relay cannot read the `keys/id_rsa` key, which is used for host key authentication between the `relay` and `boardserver` containers. Ensure that the keys in `/keys/` are readable by the Docker user.
+
