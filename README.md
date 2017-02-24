@@ -226,9 +226,9 @@ When a user disconnects from an FPGA their design will remain active. The VLAB a
 
 Resetting the boards requires that the `relay` container has access to the Xilinx command line tools. These can be installed by installing [Xilinx SDK](https://www.xilinx.com/products/design-tools/embedded-software/sdk.html) and choosing `XSCT`. 
 
-Once installed, create a symlink called `xsct` in the VLAB install folder which points to the SDK Xilinx install folder. For example (change if your install paths are non-default):
+Once installed, create a symlink called `xsct` in `/opt` which points to the SDK Xilinx install folder. For example (change if your install paths are non-default):
 
-    ln -s /opt/Xilinx/SDK/2016.4 /opt/VLAB/xsct 
+    ln -s /opt/Xilinx/SDK/2016.4 /opt/xsct 
 
 Then add `"reset: "true"` to the board definition in `vlab.conf`. For example
 
