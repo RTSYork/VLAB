@@ -224,11 +224,11 @@ In this example there is one board with a serial number `exampleboardserialnumbe
 ## Resetting boards on disconnect
 When a user disconnects from an FPGA their design will remain active. The VLAB also supports shutting down a hosted FPGA when the user disconnects. This can be useful if, for example, the board is connected to an Ethernet network and so it is not desirable to have designs active when they are not being tested.
 
-Resetting the boards requires that the `relay` container has access to the Xilinx command line tools. These can be installed by installing [Xilinx SDK](https://www.xilinx.com/products/design-tools/embedded-software/sdk.html) and choosing `XSCT`. 
+Resetting the boards requires that the `boardserver` containers have access to the Xilinx command line tools, by installing them on each board host. These can be installed by installing [Xilinx SDK](https://www.xilinx.com/products/design-tools/embedded-software/sdk.html) and choosing `XSCT`. 
 
-Once installed, create a symlink called `xsct` in `/opt` which points to the SDK Xilinx install folder. For example (change if your install paths are non-default):
+Once installed, create a symlink on the board host called `xsct` in `/opt/VLAB/` which points to the SDK Xilinx install folder. For example (change if your install paths are non-default):
 
-    ln -s /opt/Xilinx/SDK/2016.4 /opt/xsct 
+    ln -s /opt/Xilinx/SDK/2016.4 /opt/VLAB/xsct 
 
 Then add `"reset: "true"` to the board definition in `vlab.conf`. For example
 
