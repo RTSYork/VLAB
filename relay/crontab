@@ -1,2 +1,2 @@
-* * * * * /vlab/checkboards.py -s -k -v >> /var/log/vlab.log 2>&1
+* * * * * /vlab/checkboards.py -s -k -v >> /vlab/log/relay.log 2>&1
 

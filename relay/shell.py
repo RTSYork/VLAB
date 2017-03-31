@@ -11,11 +11,14 @@ script which will forward the user's ssh connection on the target board server.
 Ian Gray, 2016
 '''
 
-import os, sys, getpass, time
+import os, sys, getpass, time, logging
 import redis
 from vlabredis import *
 
 KEYS_DIR = "/vlab/keys/"
+
+logging.basicConfig(filename='/vlab/log/access.log', level=logging.INFO, format='%(asctime)s ; %(levelname)s ; %(name)s ; %(message)s')
+log = logging.getLogger(os.path.basename(sys.argv[0]))
 
 db = connecttoredis('localhost')
 
@@ -79,9 +82,11 @@ if board == None:
 	db.expire("vlab:boardclass:{}:locking".format(boardclass), 2)
 
 	board = db.spop("vlab:boardclass:{}:unlockedboards".format(boardclass))
+	unlockedcount = db.scard("vlab:boardclass:{}:unlockedboards".format(boardclass))
 	if board == None:
 		db.delete("vlab:boardclass:{}:locking".format(boardclass))
 		print("All boards of type {} are currently in use.".format(boardclass))
+		log.critical("NOFREEBOARDS: Type {}, user {}".format(boardclass, username))
 		sys.exit(1)
 
 	db.set("vlab:board:{}:lock:username".format(board), username)
@@ -90,6 +95,7 @@ else:
 	#Refresh the lock time
 	db.set("vlab:board:{}:lock:time".format(board), int(time.time()))
 
+log.log("LOCK: User {}, board {}, {} remaining in set".format(username, boardclass, unlockedcount))
 
 # Fetch the details of the locked board
 boarddetails = getBoardDetails(db, board, ["user", "server", "port"])
@@ -109,6 +115,8 @@ os.system(sshcmd)
 
 print("User disconnected. Releasing board lock.")
 unlockBoard(db, board, boardclass)
+
+log.log("RELEASE: User {}, board {}".format(username, boardclass))
 
 if db.get("vlab:knownboard:{}:reset".format(board)) == "true":
 	cmd = "/opt/xsct/bin/xsdb /vlab/reset.tcl"
