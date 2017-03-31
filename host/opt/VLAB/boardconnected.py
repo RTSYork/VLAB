@@ -11,7 +11,7 @@ ensure that only one instance of a container is ever launched.
 Ian Gray, 2016
 """
 
-import os, sys, socket, subprocess, logging, json
+import os, sys, socket, subprocess, logging, json, time
 import redis
 
 CONFIGFILE='/opt/VLAB/boardhost.conf'
@@ -33,6 +33,7 @@ serial = sys.argv[1]
 
 log.info("VLAB device {} connected.".format(serial))
 
+time.sleep(5)
 
 redisserver = "localhost"
 redisport = 6379
