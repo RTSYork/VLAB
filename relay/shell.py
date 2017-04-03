@@ -95,7 +95,7 @@ else:
 	#Refresh the lock time
 	db.set("vlab:board:{}:lock:time".format(board), int(time.time()))
 
-log.log("LOCK: {}, {}, {} remaining in set".format(username, boardclass, unlockedcount))
+log.info("LOCK: {}, {}, {} remaining in set".format(username, boardclass, unlockedcount))
 
 # Fetch the details of the locked board
 boarddetails = getBoardDetails(db, board, ["user", "server", "port"])
@@ -116,7 +116,7 @@ os.system(sshcmd)
 print("User disconnected. Releasing board lock.")
 unlockBoard(db, board, boardclass)
 
-log.log("RELEASE: {}, {}".format(username, boardclass))
+log.info("RELEASE: {}, {}".format(username, boardclass))
 
 if db.get("vlab:knownboard:{}:reset".format(board)) == "true":
 	cmd = "/opt/xsct/bin/xsdb /vlab/reset.tcl"
