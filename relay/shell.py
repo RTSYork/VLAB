@@ -86,7 +86,7 @@ if board == None:
 	if board == None:
 		db.delete("vlab:boardclass:{}:locking".format(boardclass))
 		print("All boards of type {} are currently in use.".format(boardclass))
-		log.critical("NOFREEBOARDS: Type {}, user {}".format(boardclass, username))
+		log.critical("NOFREEBOARDS: {}, {}".format(username, boardclass))
 		sys.exit(1)
 
 	db.set("vlab:board:{}:lock:username".format(board), username)
@@ -95,7 +95,7 @@ else:
 	#Refresh the lock time
 	db.set("vlab:board:{}:lock:time".format(board), int(time.time()))
 
-log.log("LOCK: User {}, board {}, {} remaining in set".format(username, boardclass, unlockedcount))
+log.log("LOCK: {}, {}, {} remaining in set".format(username, boardclass, unlockedcount))
 
 # Fetch the details of the locked board
 boarddetails = getBoardDetails(db, board, ["user", "server", "port"])
@@ -116,7 +116,7 @@ os.system(sshcmd)
 print("User disconnected. Releasing board lock.")
 unlockBoard(db, board, boardclass)
 
-log.log("RELEASE: User {}, board {}".format(username, boardclass))
+log.log("RELEASE: {}, {}".format(username, boardclass))
 
 if db.get("vlab:knownboard:{}:reset".format(board)) == "true":
 	cmd = "/opt/xsct/bin/xsdb /vlab/reset.tcl"
