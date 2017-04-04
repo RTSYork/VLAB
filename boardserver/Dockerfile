@@ -31,6 +31,7 @@ ADD sshd_config /etc/ssh/
 ADD supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 ADD *.py /vlab/
 ADD *.tcl /vlab/
+ADD reset.bin /vlab/
 
 EXPOSE 22 
 

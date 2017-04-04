@@ -9,7 +9,7 @@ if {[targets -filter {name =~ "APU"}] ne ""} {
 } else {
 	# Clear FPGA by attempting to program an invlaid bitstream
 	puts "Clearing FPGA..."
-	fpga reset.bin
+	fpga /vlab/reset.bin
 }
 
 disconnect
