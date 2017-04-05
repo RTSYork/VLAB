@@ -125,3 +125,6 @@ Temporary Items
 /*.conf.backup
 /xsct
 
+# Ignore any keys that might have ended up in here
+*.vlabkey
+
