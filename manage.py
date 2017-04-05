@@ -19,6 +19,8 @@ def build_parser():
 	
 	subparsers.add_parser('list', help='If the relay is running, list the currently available boards.')
 
+	subparsers.add_parser('stats', help='If the relay is running, parse the access log and display usage stats.')
+
 	start_parser = subparsers.add_parser('start', help='Restart the VLAB relay')
 	start_parser.add_argument('-p', '--port', nargs=1, default=["2222"], help='The SSH port to bind the relay container to')
 
@@ -110,6 +112,9 @@ def main():
 	elif args.mode == "list":
 		print("Currently available boards:")
 		os.system("docker exec vlab_relay_1 python3 /vlab/checkboards.py -v")
+
+	elif args.mode == "stats":
+		os.system("docker exec vlab_relay_1 python3 /vlab/logparse.py")
 
 	else:
 		mainparser.print_usage()

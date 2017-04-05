@@ -19,6 +19,7 @@ log.info("Begin relay server start up.")
 
 # Open the config file and parse it
 config = vlabconfig.openlog(log, CONFIGFILE)
+log.info("{} parsed successfully.".format(CONFIGFILE))
 users = config['users']
 
 # As we are started at the same time as the redis server it may time some time for it to become available

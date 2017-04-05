@@ -165,7 +165,7 @@ def main():
 	stats['earliest_date'] = stats['earliest_date'].strftime("%Y-%m-%d %H:%M:%S")
 
 	del(stats['locks'])
-	print(json.dumps(stats))
+	print(json.dumps(stats, indent=4))
 
 if __name__ == '__main__':
 	main()

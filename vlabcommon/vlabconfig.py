@@ -23,9 +23,6 @@ def openlog(log, logfile):
 		log.critical("\nLine numbers refer to the file as printed above.\nERROR: {}".format(e))
 		return None
 
-	log.info("{} parsed successfully.".format(logfile))
-
-
 	# Verify the contents of the config
 	if not "users" in config:
 		log.critical("Configuration does not contain a valid 'users' section.")
