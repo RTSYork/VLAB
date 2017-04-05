@@ -7,6 +7,7 @@ Also checks that each named user has an associated system user account with appr
 
 import json, sys, os, time, subprocess, shutil, logging
 import redis
+import vlabconfig
 
 CONFIGFILE='/vlab/vlab.conf'
 
@@ -17,58 +18,8 @@ log.info("Begin relay server start up.")
 
 
 # Open the config file and parse it
-
-with open(CONFIGFILE) as f:
-	f_no_comments = ""
-	for line in f:
-		ls = line.strip()
-		if len(ls) > 0 and ls[0] != '#':
-			f_no_comments = f_no_comments + ls + "\n"
-    
-try:
-	config = json.loads(f_no_comments)
-except ValueError as e:
-	log.critical("Error in {}".format(CONFIGFILE))
-	num = 1
-	for line in f_no_comments.split("\n"):
-		log.critical("{}: {}".format(num, line))
-		num = num + 1
-	log.critical("\nLine numbers refer to the file as printed above.\nERROR: {}".format(e))
-	sys.exit(1)
-
-log.info("{} parsed successfully.".format(CONFIGFILE))
-
-
-# Verify the contents of the config
-
-if not "users" in config:
-	log.critical("Configuration does not contain a valid 'users' section.")
-	sys.exit(2)
-if not "boards" in config:
-	log.critical("Configuration does not contain a valid 'boards' section.")
-	sys.exit(3)
-
-
+config = vlabconfig.openlog(log, CONFIGFILE)
 users = config['users']
-
-allowed_user_properties = ["overlord", "allowedboards"]
-required_board_properties = ["class", "type"]
-
-
-for user in users:
-	for k in users[user].keys():
-		if not k in allowed_user_properties:
-			log.critical("User {} has unknown property {}.".format(user, k))
-			sys.exit(4)
-
-
-for board in config['boards'].keys():
-	for p in required_board_properties:
-		if not p in config['boards'][board]:
-			log.critical("Board {} does not have property {}.".format(board, p))
-			sys.exit(5)
-
-
 
 # As we are started at the same time as the redis server it may time some time for it to become available
 connectionattempts = 1
