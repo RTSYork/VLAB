@@ -82,7 +82,6 @@ if board == None:
 	db.expire("vlab:boardclass:{}:locking".format(boardclass), 2)
 
 	board = db.spop("vlab:boardclass:{}:unlockedboards".format(boardclass))
-	unlockedcount = db.scard("vlab:boardclass:{}:unlockedboards".format(boardclass))
 	if board == None:
 		db.delete("vlab:boardclass:{}:locking".format(boardclass))
 		print("All boards of type {} are currently in use.".format(boardclass))
@@ -95,6 +94,8 @@ else:
 	#Refresh the lock time
 	db.set("vlab:board:{}:lock:time".format(board), int(time.time()))
 
+
+unlockedcount = db.scard("vlab:boardclass:{}:unlockedboards".format(boardclass))
 log.info("LOCK: {}, {}, {} remaining in set".format(username, boardclass, unlockedcount))
 
 # Fetch the details of the locked board
@@ -104,8 +105,10 @@ boarddetails = getBoardDetails(db, board, ["user", "server", "port"])
 tunnel = "-L {}:localhost:3121".format(tunnelport)
 keyfile = "{}{}".format(KEYS_DIR, "id_rsa")
 target = "root@{}".format(boarddetails['server'])
-screenrc = "defhstatus \\\"{} (VLAB)\\\"\\ncaption always\\ncaption string \\\"VLAB shell connected to {} on {}\\\"".format(boardclass, boardclass, boarddetails['server'])
-cmd = "echo -e '{}' > /vlab/vlabscreenrc; screen -c /vlab/vlabscreenrc -qdRR - /dev/ttyFPGA 115200; killall -q screen".format(screenrc)
+#screenrc = "defhstatus \\\"{} (VLAB)\\\"\\ncaption always\\ncaption string \\\"VLAB shell connected to {} on {}\\\"".format(boardclass, boardclass, boarddetails['server'])
+#cmd = "echo -e '{}' > /vlab/vlabscreenrc; screen -c /vlab/vlabscreenrc -qdRR - /dev/ttyFPGA 115200; killall -q screen".format(screenrc)
+
+cmd = "cu -l /dev/ttyFPGA -s 115200"
 
 sshcmd = "ssh {} -o \"StrictHostKeyChecking no\" -i {} -p {} -tt {} \"{}\"".format(tunnel, keyfile, boarddetails['port'], target, cmd)
 
