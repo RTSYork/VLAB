@@ -110,7 +110,7 @@ target = "root@{}".format(boarddetails['server'])
 
 cmd = "cu -l /dev/ttyFPGA -s 115200"
 
-sshcmd = "ssh {} -o \"StrictHostKeyChecking no\" -i {} -p {} -tt {} \"{}\"".format(tunnel, keyfile, boarddetails['port'], target, cmd)
+sshcmd = "ssh {} -o \"StrictHostKeyChecking no\" -e none -i {} -p {} -tt {} \"{}\"".format(tunnel, keyfile, boarddetails['port'], target, cmd)
 
 print("SSH to board server: {}".format(sshcmd))
 
