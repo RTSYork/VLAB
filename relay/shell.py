@@ -116,9 +116,7 @@ print("SSH to board server: {}".format(sshcmd))
 
 os.system(sshcmd)
 
-print("User disconnected. Releasing board lock.")
-unlockBoard(db, board, boardclass)
-
+print("User disconnected. Resetting board")
 log.info("RELEASE: {}, {}".format(username, boardclass))
 
 if db.get("vlab:knownboard:{}:reset".format(board)) == "true":
@@ -126,4 +124,8 @@ if db.get("vlab:knownboard:{}:reset".format(board)) == "true":
 	sshcmd = "ssh -o \"StrictHostKeyChecking no\" -i {} -p {} {} \"{}\"".format(keyfile, boarddetails['port'], target, cmd)
 	print("Resetting board.")
 	os.system(sshcmd)
+
+print("Releasing lock.")
+unlockBoard(db, board, boardclass)
+
 
