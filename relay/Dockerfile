@@ -1,5 +1,7 @@
 FROM vlab/vlabcommon
 
+RUN apt-get update
+
 #Prerequisites
 RUN apt-get install -y redis-server
 

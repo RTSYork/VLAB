@@ -4,6 +4,8 @@ FROM vlab/vlabcommon
 #Example: "Xilinx_HW_Server_Lin_2016.2_0605_1"
 ARG HWFILE
 
+RUN apt-get update
+
 #Prerequisites
 RUN apt-get install -y gcc-multilib openjdk-8-jre libxtst6 screen cu
 
