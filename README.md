@@ -178,11 +178,7 @@ When a new FPGA board is connected to a board host the following takes place:
 
 Consequentially, each supported FPGA must have a unique serial number, and that serial number must be readable by udev. It is often in fact the case that all FPGA development boards of the same type come from the factory with the same serial number a utility program is required to set a serial number first.
 
-@@@@@@@@@@
-
-To add information about how to do this.
-
-@@@@@@@@@@
+Instructions to program JTAG and UART serials on certain boards can be found at <https://wiki.york.ac.uk/display/RTS/Setting+Up+FPGA+Boards>.
 
 
 ## Configuration
