@@ -20,6 +20,8 @@ ADD "${HWFILE}.tar.gz" /root/
 #ADD "Xilinx_HW_Server_Lin_2016.2_0605_1.tar.gz" /root/
 RUN cd /root/${HWFILE}; ./xsetup --agree XilinxEULA,3rdPartyEULA,WebTalkTerms -b Install -e "Hardware Server (Standalone)"
 RUN cd /; rm -rf /root/${HWFILE}
+RUN ln -s /opt/Xilinx/HWSRVR/*/ /opt/Xilinx/HWSRVR/current
+
 
 #Add the VLAB internal ssh key
 ADD authorized_keys /root/.ssh/
