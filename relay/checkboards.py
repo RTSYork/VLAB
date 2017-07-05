@@ -63,6 +63,17 @@ def checkLocks(db):
 
 					if locker == None or locktime == None:
 						log("Board {} available but no lock info. Setting available.".format(b), False)
+
+						try:
+							if db.get("vlab:knownboard:{}:reset".format(b)) == "true":
+								cmd = "/opt/xsct/bin/xsdb /vlab/reset.tcl"
+								target = "root@{}".format(bd['server'])
+								keyfile = "/vlab/keys/id_rsa"
+								sshcmd = "ssh -o \"StrictHostKeyChecking no\" -i {} -p {} {} \"{}\"".format(keyfile, bd['port'], target, cmd)
+								os.system(sshcmd)
+						except Exception as e:
+							log("Exception {} when resetting board {}".format(e, b), False)
+
 						unlockBoard(db, b, bc)
 					else:
 						#check time
