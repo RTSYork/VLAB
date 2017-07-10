@@ -101,20 +101,34 @@ log.info("LOCK: {}, {}, {} remaining in set".format(username, boardclass, unlock
 # Fetch the details of the locked board
 boarddetails = getBoardDetails(db, board, ["user", "server", "port"])
 
-# All done. Prepare the bounce command
+# All done. First restart the target container
+target = "vlab@{}".format(boarddetails['server'])
+keyfile = "{}{}".format(KEYS_DIR, "id_rsa")
+cmd = "docker kill cnt-{}".format(board)
+sshcmd = "ssh -o \"StrictHostKeyChecking no\" -e none -i {} {} \"{}\"".format(keyfile, target, cmd) 
+print("Restarting target container...")
+os.system(sshcmd)
+
+cmd = "/opt/VLAB/boardscan.sh"
+sshcmd = "ssh -o \"StrictHostKeyChecking no\" -e none -i {} {} \"{}\"".format(keyfile, target, cmd) 
+os.system(sshcmd)
+
+print("Restarted.")
+
+
+# Execute the bounce command
+print("SSH to board server...")
+time.sleep(1)
+
+# Port details might have changed
+boarddetails = getBoardDetails(db, board, ["user", "server", "port"])
 tunnel = "-L {}:localhost:3121".format(tunnelport)
 keyfile = "{}{}".format(KEYS_DIR, "id_rsa")
 target = "root@{}".format(boarddetails['server'])
-#screenrc = "defhstatus \\\"{} (VLAB)\\\"\\ncaption always\\ncaption string \\\"VLAB shell connected to {} on {}\\\"".format(boardclass, boardclass, boarddetails['server'])
-#cmd = "echo -e '{}' > /vlab/vlabscreenrc; screen -c /vlab/vlabscreenrc -qdRR - /dev/ttyFPGA 115200; killall -q screen".format(screenrc)
-
-cmd = "cu -l /dev/ttyFPGA -s 115200"
-
+screenrc = "defhstatus \\\"{} (VLAB)\\\"\\ncaption always\\ncaption string \\\"VLAB shell connected to {} on {}\\\"".format(boardclass, boardclass, boarddetails['server'])
+cmd = "echo -e '{}' > /vlab/vlabscreenrc; screen -c /vlab/vlabscreenrc -qdRR - /dev/ttyFPGA 115200; killall -q screen".format(screenrc)
 sshcmd = "ssh {} -o \"StrictHostKeyChecking no\" -e none -i {} -p {} -tt {} \"{}\"".format(tunnel, keyfile, boarddetails['port'], target, cmd)
-
-print("SSH to board server: {}".format(sshcmd))
-
-os.system(sshcmd)
+rv = os.system(sshcmd)
 
 print("User disconnected. Resetting board")
 log.info("RELEASE: {}, {}".format(username, boardclass))

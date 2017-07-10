@@ -151,6 +151,22 @@ cd host
 sudo ./install.sh
 ```
 
+You must create a `vlab` user on the boardhost which has access to the `Docker` group. On the new board server:
+
+```
+adduser vlab
+usermod -a -G docker vlab
+mkdir /home/vlab/.ssh
+chown vlab:vlab /home/vlab/.ssh
+chmod 700 /home/vlab/.ssh
+```
+
+And copy the internal VLAB public key for that user.
+
+```
+scp boardserver/authorized_keys vlab@newboardserver:~/.ssh/
+```
+
 Finally, if you wish to use Digilent's boards on your board host you need to install the Digilent tools. Go to the [Digilent website](https://reference.digilentinc.com/reference/software/adept/start) and download the Runtime and Utilities. This example describes using the `.zip` versions. As root:
 
 ```

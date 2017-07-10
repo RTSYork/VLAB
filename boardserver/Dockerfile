@@ -7,7 +7,7 @@ ARG HWFILE
 RUN apt-get update
 
 #Prerequisites
-RUN apt-get install -y gcc-multilib openjdk-8-jre libxtst6 screen cu
+RUN apt-get install -y gcc-multilib openjdk-8-jre libxtst6 screen psmisc
 
 #Set locales to US to keep the Xilinx tools happy
 RUN locale-gen en_US.UTF-8  
