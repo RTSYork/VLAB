@@ -48,7 +48,7 @@ If the VLAB relay server or port are not the defaults defined in the script they
 
 These commands will request a free board of the board class `requested_board_class` and, if one is free, connect to it. Local port `12345` will be connected to the remote hardware server for that board, so the Xilinx tools can be pointed at `localhost:12345` to program and debug the FPGA, whilst the terminal will show the serial UART input and output.
 
-The terminal uses [GNU cu](http://www.delorie.com/gnu/docs/uucp/cu.1.html) so to disconnect hit Enter and type `~.` (tilde, period) into the terminal.
+The terminal uses [GNU screen](https://www.gnu.org/software/screen/) so to disconnect press and release Ctrl-A, then press Ctrl-K (or Cmd-A, Cmd-K on MacOS).
 
 
 
