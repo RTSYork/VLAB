@@ -119,6 +119,7 @@ Temporary Items
 # Files in root directory that may be added after install
 /boardconnected.py
 /boarddetached.py
+/boardrestart.py
 /boardhost.conf
 /boardscan.sh
 /boardserver.tar

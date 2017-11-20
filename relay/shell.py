@@ -104,13 +104,9 @@ boarddetails = getBoardDetails(db, board, ["user", "server", "port"])
 # All done. First restart the target container
 target = "vlab@{}".format(boarddetails['server'])
 keyfile = "{}{}".format(KEYS_DIR, "id_rsa")
-cmd = "docker kill cnt-{}".format(board)
-sshcmd = "ssh -o \"StrictHostKeyChecking no\" -e none -i {} {} \"{}\"".format(keyfile, target, cmd) 
+cmd = "/opt/VLAB/boardrestart.py {}".format(board)
+sshcmd = "ssh -o \"StrictHostKeyChecking no\" -e none -i {} {} \"{}\"".format(keyfile, target, cmd)
 print("Restarting target container...")
-os.system(sshcmd)
-
-cmd = "/opt/VLAB/boardscan.sh"
-sshcmd = "ssh -o \"StrictHostKeyChecking no\" -e none -i {} {} \"{}\"".format(keyfile, target, cmd) 
 os.system(sshcmd)
 
 print("Restarted.")
