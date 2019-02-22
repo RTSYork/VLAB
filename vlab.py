@@ -30,7 +30,7 @@ parser.add_argument('-l', '--localport', nargs=1, default=["12345"], help="Local
 parser.add_argument('-k', '--key', nargs=1, help="VLAB keyfile to use for authentication.")
 parser.add_argument('-u', '--user', nargs=1, default=[getpass.getuser()], help="VLAB username.")
 
-parser.add_argument('-b', '--board', nargs=1, default=["vlab_zybo"], help="Requested board class.")
+parser.add_argument('-b', '--board', nargs=1, default=["vlab_zybo-z7"], help="Requested board class.")
 parsed = parser.parse_args()
 
 
