@@ -4,7 +4,7 @@
 The VLAB client script.
 
 Example usage:
-	./client.py -k vlabkeyfile -b an_fpga_board
+	./vlab.py -k keyfile.vlabkey -b an_fpga_board
 
 The script will assume your username is the same as the system user. To specify a different username
 use the -u option.
