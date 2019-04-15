@@ -17,6 +17,9 @@ from vlabredis import *
 
 KEYS_DIR = "/vlab/keys/"
 
+# This should match MAX_LOCK_TIME in 'checkboards.py' (a better solution would be good)
+MAX_LOCK_TIME = 600
+
 logging.basicConfig(filename='/vlab/log/access.log', level=logging.INFO, format='%(asctime)s ; %(levelname)s ; %(name)s ; %(message)s')
 log = logging.getLogger(os.path.basename(sys.argv[0]))
 
@@ -74,7 +77,9 @@ board = None
 for b in db.smembers("vlab:boardclass:{}:boards".format(boardclass)):
 	if db.get("vlab:board:{}:lock:username".format(b)) == username:
 		board = b
-		break 
+		break
+
+locktime = int(time.time())
 
 if board == None:
 	# Try to grab a lock for the boardclass
@@ -89,10 +94,10 @@ if board == None:
 		sys.exit(1)
 
 	db.set("vlab:board:{}:lock:username".format(board), username)
-	db.set("vlab:board:{}:lock:time".format(board), int(time.time()))
+	db.set("vlab:board:{}:lock:time".format(board), locktime)
 else:
 	#Refresh the lock time
-	db.set("vlab:board:{}:lock:time".format(board), int(time.time()))
+	db.set("vlab:board:{}:lock:time".format(board), locktime)
 
 
 unlockedcount = db.scard("vlab:boardclass:{}:unlockedboards".format(boardclass))
@@ -100,6 +105,11 @@ log.info("LOCK: {}, {}, {} remaining in set".format(username, boardclass, unlock
 
 # Fetch the details of the locked board
 boarddetails = getBoardDetails(db, board, ["user", "server", "port"])
+
+lockstart = time.strftime("%H:%M:%S %Z", time.localtime(locktime))
+lockend = time.strftime("%d/%m/%y at %H:%M:%S %Z", time.localtime(locktime+MAX_LOCK_TIME))
+print("Locked board type '{}' for user '{}' at {} for {} seconds".format(boardclass, username, lockstart, MAX_LOCK_TIME))
+print("BOARD LOCK EXPIRES: {}".format(lockend))
 
 # All done. First restart the target container
 target = "vlab@{}".format(boarddetails['server'])
@@ -121,7 +131,7 @@ boarddetails = getBoardDetails(db, board, ["user", "server", "port"])
 tunnel = "-L {}:localhost:3121".format(tunnelport)
 keyfile = "{}{}".format(KEYS_DIR, "id_rsa")
 target = "root@{}".format(boarddetails['server'])
-screenrc = "defhstatus \\\"{} (VLAB)\\\"\\ncaption always\\ncaption string \\\"VLAB shell connected to {} on {}\\\"".format(boardclass, boardclass, boarddetails['server'])
+screenrc = "defhstatus \\\"{} (VLAB Shell)\\\"\\ncaption always\\ncaption string \\\" VLAB Shell [ User: {} | Lock expires: {} | Board class: {} | Board server: {} ]\\\"".format(boardclass, username, lockend, boardclass, boarddetails['server'])
 cmd = "echo -e '{}' > /vlab/vlabscreenrc; screen -c /vlab/vlabscreenrc -qdRR - /dev/ttyFPGA 115200; killall -q screen".format(screenrc)
 sshcmd = "ssh {} -o \"StrictHostKeyChecking no\" -e none -i {} -p {} -tt {} \"{}\"".format(tunnel, keyfile, boarddetails['port'], target, cmd)
 rv = os.system(sshcmd)
