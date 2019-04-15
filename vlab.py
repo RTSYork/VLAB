@@ -15,8 +15,16 @@ have to specify them, but they can be overridden if required.
 Ian Gray, 2017
 '''
 
+############################
+# Update version string here and in 'current_version' file when updating this script
+# Version number must be in 'x.y.z' format
+current_version = '1.0.0'
+current_branch = 'master'
+############################
+
 import os, argparse, sys, getpass
 from subprocess import Popen, PIPE
+import urllib.request
 
 def err(s):
 	print(s)
@@ -32,6 +40,28 @@ parser.add_argument('-u', '--user', nargs=1, default=[getpass.getuser()], help="
 
 parser.add_argument('-b', '--board', nargs=1, default=["vlab_zybo-z7"], help="Requested board class.")
 parsed = parser.parse_args()
+
+
+# Check for an update from GitHub repository
+update_url = 'https://raw.githubusercontent.com/RTSYork/VLAB/{}/client_version'.format(current_branch)
+req = urllib.request.Request(update_url)
+try:
+	response = urllib.request.urlopen(req)
+	content = response.readline()
+	remote_version_string = content.decode('utf-8')
+	remote_version = tuple(map(int, (remote_version_string.split("."))))
+	local_version = tuple(map(int, (current_version.split("."))))
+	if local_version < remote_version:
+		print('A new version of the VLAB script is available on GitHub')
+		print('You have version v{} and the latest is v{}'.format(current_version, remote_version_string))
+		print('Download the latest version from https://raw.githubusercontent.com/RTSYork/VLAB/{}/vlab.py'.format(current_branch))
+		print()
+		try:
+			input("Press Control-C to exit, or press Enter to continue...")
+		except KeyboardInterrupt:
+			sys.exit(0)
+except urllib.error.URLError as e:
+	print('Error checking for script updates:', e.reason)
 
 
 # Check the keyfile exists
