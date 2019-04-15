@@ -65,6 +65,14 @@ def unlockBoard(db, board, boardclass):
 	db.sadd("vlab:boardclass:{}:unlockedboards".format(boardclass), board)
 
 
+def unlockBoardIfUser(db, board, boardclass, user):
+	'''
+	Unlock the board 'board' of a given boardclass, if locked by 'user'.
+	'''
+	if db.get("vlab:board:{}:lock:username".format(board)) == user:
+		unlockBoard(db, board, boardclass)
+
+
 def unlockBoardNoBoardclass(db, board):
 	'''
 	Unlock the board 'board' where the boardclass is unknown. Uses getBoardclassOfBoard to find it.
