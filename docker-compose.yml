@@ -7,6 +7,8 @@ services:
       - "5000:5000"
     links:
       - relay
+    environment:
+      - TZ=Europe/London
 
   relay:
     image: vlab/relay
@@ -17,3 +19,5 @@ services:
       - "./vlab.conf:/vlab/vlab.conf"
       - "./keys:/vlab/keys/"
       - "./log:/vlab/log/"
+    environment:
+      - TZ=Europe/London
