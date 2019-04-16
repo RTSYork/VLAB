@@ -146,6 +146,6 @@ if db.get("vlab:knownboard:{}:reset".format(board)) == "true":
 	os.system(sshcmd)
 
 print("Releasing lock.")
-unlockBoardIfUser(db, board, boardclass, username)
+unlockBoardIfUserAndTime(db, board, boardclass, username, locktime)
 
 

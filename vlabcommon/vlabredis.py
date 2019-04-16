@@ -73,6 +73,14 @@ def unlockBoardIfUser(db, board, boardclass, user):
 		unlockBoard(db, board, boardclass)
 
 
+def unlockBoardIfUserAndTime(db, board, boardclass, user, time):
+	'''
+	Unlock the board 'board' of a given boardclass, if locked by 'user' at 'time'.
+	'''
+	if db.get("vlab:board:{}:lock:time".format(board)) == str(time):
+		unlockBoardIfUser(db, board, boardclass, user)
+
+
 def unlockBoardNoBoardclass(db, board):
 	'''
 	Unlock the board 'board' where the boardclass is unknown. Uses getBoardclassOfBoard to find it.
