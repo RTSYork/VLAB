@@ -89,7 +89,8 @@ if board == None:
 	board = db.spop("vlab:boardclass:{}:unlockedboards".format(boardclass))
 	if board == None:
 		db.delete("vlab:boardclass:{}:locking".format(boardclass))
-		print("All boards of type {} are currently in use.".format(boardclass))
+		print("All boards of type '{}' are currently locked by other VLAB users.".format(boardclass))
+		print("Try again in a few minutes (locks expire after {} minutes).".format(int(MAX_LOCK_TIME/60)))
 		log.critical("NOFREEBOARDS: {}, {}".format(username, boardclass))
 		sys.exit(1)
 
