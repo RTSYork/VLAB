@@ -1,0 +1,9 @@
+# This file is just for the UART tty part of the two-interface USB connection, the JTAG is handled by 80-vlab-jtag-digilent.rules
+
+# Create symlink for UART tty, with 0666 permissions
+ATTRS{idVendor}=="0403", ATTRS{manufacturer}=="Digilent", SUBSYSTEM=="tty", ENV{ID_USB_INTERFACE_NUM}=="01", SYMLINK+="vlab/%s{serial}/tty", MODE="0666"
+
+# Start board server - this will only succeed once as it requires both symlinks to be present first
+ACTION=="add", ATTRS{idVendor}=="0403", ATTRS{manufacturer}=="Digilent", SUBSYSTEM=="tty", ENV{ID_USB_INTERFACE_NUM}=="01", RUN+="/bin/sh -c '/usr/bin/python3 /opt/VLAB/boardconnected.py $env{ID_SERIAL_SHORT} >> /opt/VLAB/log/attachdetach.log 2>&1'"
+
+# No remove rule is needed, as JTAG device will also be removed at the same time

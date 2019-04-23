@@ -1,0 +1,8 @@
+# Create symlinks for USB JTAG device, with 0666 permissions
+ATTR{idVendor}=="0403", ATTR{manufacturer}=="Digilent", SYMLINK+="vlab/%s{serial}/jtag", MODE="0666"
+
+# Start board server - this will only succeed once as it requires both JTAG and TTY symlinks to be present first
+ACTION=="add", ATTR{idVendor}=="0403", ATTR{manufacturer}=="Digilent", RUN+="/bin/sh -c '/usr/bin/python3 /opt/VLAB/boardconnected.py %s{serial} >> /opt/VLAB/log/attachdetach.log 2>&1'"
+
+# Fire when Digilent USB device is removed (note ENV rather than ATTR)
+ACTION=="remove", ENV{ID_VENDOR_ID}=="0403", ENV{ID_VENDOR}=="Digilent", SUBSYSTEM=="tty", ENV{ID_USB_INTERFACE_NUM}=="00", RUN+="/bin/sh -c '/usr/bin/python3 /opt/VLAB/boarddetached.py $env{ID_SERIAL_SHORT} >> /opt/VLAB/log/attachdetach.log 2>&1'"

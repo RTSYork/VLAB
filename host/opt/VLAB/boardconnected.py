@@ -80,16 +80,16 @@ bclass = db.get("vlab:knownboard:{}:class".format(serial))
 
 log.info("Device serial {} is of type {} and class {}".format(serial, btype, bclass))
 
-# udev rules have created us symlinks to the FPGA at /dev/vlab/<serial number>/[tty | dev]
-tty_node = "/dev/vlab/{}/tty".format(serial) # The actual USB device of the FPGA
-device_node = "/dev/vlab/{}/dev".format(serial) # The tty device of the FPGA
+# udev rules have created us symlinks to the FPGA at /dev/vlab/<serial number>/[tty | jtag]
+tty_node = "/dev/vlab/{}/tty".format(serial) # The UART tty device of the FPGA
+jtag_node = "/dev/vlab/{}/jtag".format(serial) # The USB JTAG device of the FPGA
 
 if not debug:
 	if not os.path.islink(tty_node):
-		log.critical("/dev/vlab/{} should contain a tty symlink but does not.".format(serial))
+		log.critical("/dev/vlab/{} should contain a 'tty' symlink but does not.".format(serial))
 		sys.exit(6)
-	if not os.path.islink(device_node):
-		log.critical("/dev/vlab/{} should contain a dev symlink but does not.".format(serial))
+	if not os.path.islink(jtag_node):
+		log.critical("/dev/vlab/{} should contain a 'jtag' symlink but does not.".format(serial))
 		sys.exit(7)
 
 # The container has an SSH port 22 which we map into the host's ephemeral port range
@@ -99,7 +99,7 @@ if not debug:
 # Also, if the Xilinx command line tools are located at /opt/VLAB/xsct they are mapped into the container
 if not debug:
 	mapping_arguments = ["-p", "22", 
-		"--device", "{}".format(os.path.realpath(device_node)), 
+		"--device", "{}".format(os.path.realpath(jtag_node)), 
 		"--device", "{}:/dev/ttyFPGA".format(os.path.realpath(tty_node)),
 		"-v", "/opt/VLAB/xsct/:/opt/xsct"]
 else:
