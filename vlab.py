@@ -41,6 +41,7 @@ parser.add_argument('-u', '--user', nargs=1, default=[getpass.getuser()], help="
 parser.add_argument('-b', '--board', nargs=1, default=["vlab_zybo-z7"], help="Requested board class.")
 parsed = parser.parse_args()
 
+errinfo = "If you are having difficulty connecting, ensure that you are able to ssh to the server {}.\nRead the instructions at\n\thttps://wiki.york.ac.uk/display/RTS/Using+the+Xilinx+Tools+Remotely".format(parsed.relay[0])
 
 # Check for an update from GitHub repository
 update_url = 'https://raw.githubusercontent.com/RTSYork/VLAB/{}/client_version'.format(current_branch)
@@ -76,16 +77,17 @@ sshcmd = ['ssh', '-i', parsed.key[0], '-p', parsed.port[0], '{}@{}'.format(parse
 stdout, stderr = Popen(sshcmd, stdout=PIPE).communicate()
 try:
 	reply = stdout.decode('ascii').strip()
-	if len(reply) > 9:
-		if reply[:9] == "VLABPORT:":
-			portstr = reply[9:]
-			ephemeralport = int(portstr)
-		else:
-			err("Invalid reply from VLAB server. Wrong header.")
-	else:
-		err("Invalid reply from VLAB server. Message too short.")
 except:
-	err("Invalid reply from VLAB server. Incorrect message format.")
+	err("Invalid reply from VLAB server. Incorrect message format.\n{}".format(errinfo))
+
+if len(reply) > 9:
+	if reply[:9] == "VLABPORT:":
+		portstr = reply[9:]
+		ephemeralport = int(portstr)
+	else:
+		err("Invalid reply from VLAB server. Wrong header.\n{}".format(errinfo))
+else:
+	err("Invalid reply from VLAB server. Message too short.\n{}".format(errinfo))
 
 print("Using tunnel port {}".format(ephemeralport))
 
@@ -101,3 +103,5 @@ sshcmd = "ssh -L {}:localhost:{} -o \"StrictHostKeyChecking no\" -e none -i {} -
 	parsed.board[0], 
 	ephemeralport)
 os.system(sshcmd)
+
+
