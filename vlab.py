@@ -18,7 +18,7 @@ Ian Gray, 2017
 ############################
 # Update version string here and in 'current_version' file when updating this script
 # Version number must be in 'x.y.z' format
-current_version = '1.0.0'
+current_version = '1.0.1'
 current_branch = 'master'
 ############################
 
