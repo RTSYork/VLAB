@@ -12,7 +12,8 @@ for f in *; do
 	fi
 done
 
-chmod 777 /opt/VLAB/log/*.log
+# Modify this symlink based on where the Xilinx SDK tools have been installed
+ln -s /opt/Xilinx/SDK/2016.4 /opt/VLAB/xsct
 
 echo "
 Install completed.
