@@ -76,17 +76,12 @@ def checkLocks(db):
 
 						unlockBoard(db, b, bc)
 					else:
-						#check time
+						# check time
 						log("\t\tLocked by {} at {}.".format(locker, locktime), True)
-
-						if True:
-							currenttime = int(time.time())
-							if currenttime - int(locktime) > MAX_LOCK_TIME:
-								log("Board {} lock timed out. Forced release.".format(b), False)
-								unlockBoard(db, b, bc)
-						else:
-							#We're ok, leave it
-							pass
+						currenttime = int(time.time())
+						if currenttime - int(locktime) > MAX_LOCK_TIME:
+							log("Board {} lock timed out. Forced release.".format(b), False)
+							unlockBoard(db, b, bc)
 				else:
 					log("\t\tAvailable", True)
 		else:
