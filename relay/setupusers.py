@@ -64,7 +64,7 @@ try:
 			shutil.copyfile("/vlab/keys/{}.pub".format(user), "/home/{}/.ssh/authorized_keys".format(user))
 			shutil.chown("/home/{}/.ssh/".format(user), user="{}".format(user), group="{}".format(user))
 			shutil.chown("/home/{}/.ssh/authorized_keys".format(user), user="{}".format(user), group="{}".format(user))
-			log.info("\tchmod 666 /home/{}/.ssh/authorized_keys".format(user))
+			log.info("\tchmod 600 /home/{}/.ssh/authorized_keys".format(user))
 			os.chmod("/home/{}/.ssh/authorized_keys".format(user), 0o600)
 except Exception as e:
 	log.critical("Error creating users. {}".format(e))
