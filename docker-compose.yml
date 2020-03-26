@@ -16,8 +16,8 @@ services:
       - "6379:6379"
       - "2222:22"
     volumes:
-      - "./vlab.conf:/vlab/vlab.conf"
-      - "./keys:/vlab/keys/"
-      - "./log:/vlab/log/"
+      - "./vlab.conf:/vlab/vlab.conf:ro"
+      - "./keys:/vlab/keys/:ro"
+      - "./log:/vlab/log/:rw"
     environment:
       - TZ=Europe/London
