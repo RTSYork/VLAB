@@ -156,6 +156,8 @@ def generate_key(user):
 	remove_if_exists("keys/{}".format(user))
 	remove_if_exists("keys/{}.pub".format(user))
 	os.system('ssh-keygen -q -N "" -f keys/{}'.format(user))
+	os.system('sudo chown 50000:50000 keys/{0} keys/{0}.pub'.format(user))
+	os.system('sudo chmod 444 keys/{0} keys/{0}.pub'.format(user))
 
 
 
