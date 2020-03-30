@@ -5,9 +5,12 @@ Management script for the VLAB. Used to rebuild images, start containers, manage
 """
 
 import argparse
+import datetime
 import glob
 import json
 import os
+import re
+import subprocess
 import sys
 
 containers = ['vlabcommon', 'boardserver', 'relay', 'web']
@@ -22,7 +25,7 @@ def build_arg_parsers():
 	build_parser.add_argument('images', nargs='*', help='List the images to build, or none to build all images.')
 
 	subparsers.add_parser('list', help='If the relay is running, list the currently available boards.')
-
+	subparsers.add_parser('status', help='Displays current status of the VLAB and available boards.')
 	subparsers.add_parser('stats', help='If the relay is running, parse the access log and display usage stats.')
 
 	start_parser = subparsers.add_parser('start', help='Restart the VLAB relay')
@@ -124,11 +127,73 @@ def main():
 		print("Currently available boards:")
 		os.system("docker exec vlab_relay_1 python3 /vlab/checkboards.py -v")
 
+	elif args.mode == "status":
+		print("****************************************")
+		print("Current VLAB Status at", current_time())
+		print("****************************************")
+		# First pass to ping SSH on each board server from the relay
+		subprocess.run(['docker', 'exec', 'vlab_relay_1', 'python3', '/vlab/checkboards.py', '-vs'],
+		               stdout=subprocess.PIPE)
+		# Second pass to get board lock details from relay
+		result = subprocess.run(['docker', 'exec', 'vlab_relay_1', 'python3', '/vlab/checkboards.py', '-v'],
+		                        stdout=subprocess.PIPE)
+		result_text = result.stdout.decode('utf-8')
+		output = parse_checkboards_output(result_text)
+		print(output)
+		print("****************************************")
+
 	elif args.mode == "stats":
 		os.system("docker exec vlab_relay_1 python3 /vlab/logparse.py")
 
 	else:
 		main_parser.print_usage()
+
+
+def parse_timestamp(timestamp):
+	time = datetime.datetime.fromtimestamp(int(timestamp)).astimezone()
+	return time.strftime('%Y-%m-%d %H:%M:%S %Z')
+
+
+def current_time():
+	time = datetime.datetime.now().astimezone()
+	return time.strftime('%Y-%m-%d %H:%M:%S %Z')
+
+
+def parse_checkboards_output(text):
+	boards_list = {}
+	result = ""
+
+	pattern = re.compile(
+		"Boardclass: (.*?)$\\n(.*?)$(?=\\n\\d\\d\\d\\d-\\d\\d-\\d\\d-\\d\\d:\\d\\d:\\d\\d "
+		"checkboards\\.py: Boardclass|\\n*\\Z)", re.DOTALL | re.MULTILINE)
+	boardclasses = pattern.findall(text)
+
+	for boardclass in boardclasses:
+		pattern = re.compile("Board: (.*?)\\n.*?Server: (.*?)\\n.*?checkboards\\.py: \\t*(.*?)$", re.MULTILINE)
+		boards = pattern.findall(boardclass[1])
+		boards_list[boardclass[0]] = sorted(boards, key=lambda tup: tup[1])
+
+	for boardclass in sorted(boards_list.keys()):
+		boards = boards_list[boardclass]
+		result += "{} - {} boards\n".format(boardclass, len(boards))
+		for board in boards:
+			server = board[1]
+			serial = board[0]
+			status = board[2]
+			pattern1 = re.compile("Locked by (.*) at (\\d*) until (\\d*)\\.")
+			lock_info1 = pattern1.findall(status)
+			pattern2 = re.compile("Board .* available but no lock info\\. Setting available\\.")
+			lock_info2 = pattern2.findall(status)
+			if len(lock_info1) > 0:
+				user = lock_info1[0][0]
+				lock_time = parse_timestamp(lock_info1[0][1])
+				expiry_time = parse_timestamp(lock_info1[0][2])
+				status = "Locked by {} ({} to {})".format(user, lock_time, expiry_time)
+			elif len(lock_info2) > 0:
+				status = "Available but no lock info - setting available"
+			result += "\t{}\t{}\t{}\n".format(server, serial, status)
+		result += "\n"
+	return result
 
 
 def remove_if_exists(filename):
