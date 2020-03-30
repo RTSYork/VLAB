@@ -108,7 +108,7 @@ def unlockBoardsHeldBy(db, user):
 	for bc in db.smembers("vlab:boardclasses"):
 		for board in db.smembers("vlab:boardclass:{}:boards".format(bc)):
 			if db.get("vlab:board:{}:lock:username".format(board)) == user:
-				unlockBoard(db, board)
+				unlock_board_no_boardclass(db, board)
 
 
 def removeBoard(db, b):
