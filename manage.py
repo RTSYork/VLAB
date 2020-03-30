@@ -90,6 +90,10 @@ def main():
 			remove_if_exists("keys/id_rsa.pub")
 			os.system('ssh-keygen -q -N "" -f keys/id_rsa')
 			os.system("cp keys/id_rsa.pub boardserver/authorized_keys")
+			print("Creating 'VLAB keys owner' user and setting key permissions (requires root)...")
+			os.system("sudo useradd -M -d /nonexistent -s /usr/sbin/nologin -u 50000 vlab_keys_owner")
+			os.system('sudo chown 50000:50000 keys/id_rsa keys/id_rsa.pub'.format(user))
+			os.system('sudo chmod 444 keys/id_rsa keys/id_rsa.pub'.format(user))
 			print("Keys generated. Now run: {} build".format(sys.argv[0]))
 		elif args.allnew == True:
 			for user, _ in config['users'].items():
