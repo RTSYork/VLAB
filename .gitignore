@@ -123,9 +123,8 @@ Temporary Items
 /boardhost.conf
 /boardscan.sh
 /boardserver.tar
-/*.conf.backup
+/*.conf.backup*
 /xsct
 
 # Ignore any keys that might have ended up in here
 *.vlabkey
-
