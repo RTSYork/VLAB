@@ -1,2 +1,1 @@
 * * * * * /vlab/checkboards.py -s -k >> /vlab/log/relay.log 2>&1
-
