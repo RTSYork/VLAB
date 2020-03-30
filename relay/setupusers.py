@@ -1,4 +1,4 @@
-#/usr/bin/env python3
+#!/usr/bin/env python3
 
 '''
 Reads a list of users from CONFIGFILE and populates the redis database with them.
