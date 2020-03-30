@@ -1,10 +1,11 @@
-import sys, json, logging
+import json
 
 """
 Routines for opening and checking the vlab.conf file
 """
 
-def openlog(log, logfile):
+
+def open_log(log, logfile):
 	with open(logfile) as f:
 		f_no_comments = ""
 		for line in f:
@@ -24,10 +25,10 @@ def openlog(log, logfile):
 		return None
 
 	# Verify the contents of the config
-	if not "users" in config:
+	if "users" not in config:
 		log.critical("Configuration does not contain a valid 'users' section.")
 		return None
-	if not "boards" in config:
+	if "boards" not in config:
 		log.critical("Configuration does not contain a valid 'boards' section.")
 		return None
 
@@ -38,13 +39,13 @@ def openlog(log, logfile):
 
 	for user in users:
 		for k in users[user].keys():
-			if not k in allowed_user_properties:
+			if k not in allowed_user_properties:
 				log.critical("User {} has unknown property {}.".format(user, k))
 				return None
 
 	for board in config['boards'].keys():
 		for p in required_board_properties:
-			if not p in config['boards'][board]:
+			if p not in config['boards'][board]:
 				log.critical("Board {} does not have property {}.".format(board, p))
 				return None
 

@@ -11,14 +11,19 @@ ensure that only one instance of a container is ever launched.
 Ian Gray, 2016
 """
 
-import os, sys, socket, subprocess, logging, json, time
+import json
+import logging
+import os
+import socket
+import subprocess
+import sys
+import time
 import redis
 
-CONFIGFILE='/opt/VLAB/boardhost.conf'
+CONFIG_FILE = '/opt/VLAB/boardhost.conf'
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s ; %(levelname)s ; %(name)s ; %(message)s')
 log = logging.getLogger(os.path.basename(sys.argv[0]))
-
 
 if len(sys.argv) < 2:
 	print("Usage: {} {{serial number}}".format(sys.argv[0]))
@@ -35,12 +40,12 @@ log.info("VLAB device {} connected.".format(serial))
 
 time.sleep(5)
 
-redisserver = "localhost"
-redisport = 6379
+redis_server = "localhost"
+redis_port = 6379
 
 # Open the config file and parse it
 try:
-	with open(CONFIGFILE) as f:
+	with open(CONFIG_FILE) as f:
 		f_no_comments = ""
 		for line in f:
 			ls = line.strip()
@@ -48,41 +53,39 @@ try:
 				f_no_comments = f_no_comments + ls + "\n"
 		config = json.loads(f_no_comments)
 		if 'server' in config:
-			redisserver = config['server']
+			redis_server = config['server']
 		if 'port' in config:
-			redisport = config['port']
-		log.info("{} parsed successfully; using server ({}:{})".format(CONFIGFILE, redisserver, redisport))
+			redis_port = config['port']
+		log.info("{} parsed successfully; using server ({}:{})".format(CONFIG_FILE, redis_server, redis_port))
 except ValueError as e:
-	log.info("Error parsing config file `{}`; using default server ({}:{}).".format(CONFIGFILE, redisserver, redisport))
+	log.info("Error parsing config file `{}`; using default server ({}:{}).".format(CONFIG_FILE, redis_server, redis_port))
 except FileNotFoundError as e:
-	log.info("Cannot find config file `{}`; using default server ({}:{}).".format(CONFIGFILE, redisserver, redisport))
-
+	log.info("Cannot find config file `{}`; using default server ({}:{}).".format(CONFIG_FILE, redis_server, redis_port))
 
 try:
-	db = redis.StrictRedis(host=redisserver, port=redisport, db=0, decode_responses=True)
+	db = redis.StrictRedis(host=redis_server, port=redis_port, db=0, decode_responses=True)
 	db.ping()
 except redis.exceptions.ConnectionError as e:
-	log.critical("Error whilst connecting to host {}\n{}".format(redisserver, e))
+	log.critical("Error whilst connecting to host {}\n{}".format(redis_server, e))
 	sys.exit(4)
 
-
 # Check with the redis server to see if the serial number of the board is known
-# From the serial we learn its type (i.e. "a Digilent Zybo") and class (i.e. "this is a VLAB Zybo", vs "this is a research Zybo")
+# From the serial we learn its type (e.g. "a Digilent Zybo") and class (e.g. "EMBS Zybo", vs "research Zybo")
 if not db.sismember("vlab:knownboards", serial):
 	log.critical("Board with serial number {} is not in the VLAB database. Exiting.".format(serial))
 	sys.exit(5)
 
-btype = db.get("vlab:knownboard:{}:type".format(serial))
-bclass = db.get("vlab:knownboard:{}:class".format(serial))
+boardtype = db.get("vlab:knownboard:{}:type".format(serial))
+boardclass = db.get("vlab:knownboard:{}:class".format(serial))
 
-# At this point we can fire up different containers based on btype.
+# At this point we can fire up different containers based on boardtype.
 # Currently, only one container is required to support all boards, but this may change in the future.
 
-log.info("Device serial {} is of type {} and class {}".format(serial, btype, bclass))
+log.info("Device serial {} is of type {} and class {}".format(serial, boardtype, boardclass))
 
 # udev rules have created us symlinks to the FPGA at /dev/vlab/<serial number>/[tty | jtag]
-tty_node = "/dev/vlab/{}/tty".format(serial) # The UART tty device of the FPGA
-jtag_node = "/dev/vlab/{}/jtag".format(serial) # The USB JTAG device of the FPGA
+tty_node = "/dev/vlab/{}/tty".format(serial)  # The UART tty device of the FPGA
+jtag_node = "/dev/vlab/{}/jtag".format(serial)  # The USB JTAG device of the FPGA
 
 if not debug:
 	if not os.path.islink(tty_node):
@@ -98,47 +101,47 @@ if not debug:
 # It doesn't matter where we map the USB device, as the Xilinx hw server searches the entire bus range
 # Also, if the Xilinx command line tools are located at /opt/VLAB/xsct they are mapped into the container
 if not debug:
-	mapping_arguments = ["-p", "22", 
-		"--device", "{}".format(os.path.realpath(jtag_node)), 
-		"--device", "{}:/dev/ttyFPGA".format(os.path.realpath(tty_node)),
-		"-v", "/opt/VLAB/xsct/:/opt/xsct"]
+	mapping_arguments = ["-p", "22",
+	                     "--device", "{}".format(os.path.realpath(jtag_node)),
+	                     "--device", "{}:/dev/ttyFPGA".format(os.path.realpath(tty_node)),
+	                     "-v", "/opt/VLAB/xsct/:/opt/xsct"]
 else:
 	mapping_arguments = ["-p", "22"]
 
-
 # Remove the container in case it already exists, then run it
-containername = "cnt-{}".format(serial)
+container_name = "cnt-{}".format(serial)
 try:
-	s = subprocess.check_output(['docker', 'rm', '-f', containername])
-except:
+	subprocess.check_output(['docker', 'rm', '-f', container_name])
+except subprocess.CalledProcessError:
 	pass
 try:
-	s = subprocess.check_output(['docker', 'run', '-d', '--name', containername] + mapping_arguments + ["vlab/boardserver"]) 
+	subprocess.check_output(['docker', 'run', '-d', '--name', container_name] + mapping_arguments + ["vlab/boardserver"])
 except Exception as e:
-	log.critical("Running container {} failed. {}".format(containername, e))
+	log.critical("Running container {} failed. {}".format(container_name, e))
 	sys.exit(18)
 
 # Now we need to see which host port the SSH port on the container was given
-hostport = subprocess.check_output(['docker', 'port', containername, "22"])
-hostport = str(hostport, 'ascii')
-hostport = int(hostport.split(":")[1])
+host_port = subprocess.check_output(['docker', 'port', container_name, "22"])
+host_port = str(host_port, 'ascii')
+host_port = int(host_port.split(":")[1])
 
+# Set up a cron inside the container to re-register itself periodically
+cmd = 'echo \\* \\* \\* \\* \\* root /usr/bin/python3 /vlab/register.py {} {} {} {} > /etc/cron.d/vlab-cron'\
+	.format(serial, socket.gethostname(), host_port, redis_server)
 
-# Set up a cron inside the container to reregister itself periodically
-cmd = 'echo \* \* \* \* \* root /usr/bin/python3 /vlab/register.py {} {} {} {} > /etc/cron.d/vlab-cron'.format(serial, socket.gethostname(), hostport, redisserver)
-s = subprocess.check_output(['docker', 'exec', containername, '/bin/sh', '-c', cmd])
+subprocess.check_output(['docker', 'exec', container_name, '/bin/sh', '-c', cmd])
 
 # Finally, we register our new board with the redis server ourselves as well
 
 # Set up our boardclass
-db.sadd("vlab:boardclasses", bclass)
-db.sadd("vlab:boardclass:{}:boards".format(bclass), serial)
-db.sadd("vlab:boardclass:{}:unlockedboards".format(bclass), serial)
+db.sadd("vlab:boardclasses", boardclass)
+db.sadd("vlab:boardclass:{}:boards".format(boardclass), serial)
+db.sadd("vlab:boardclass:{}:unlockedboards".format(boardclass), serial)
 
 # Set up our board with details provided. Remove any locks.
 db.set("vlab:board:{}:user".format(serial), "root")
 db.set("vlab:board:{}:server".format(serial), socket.gethostname())
-db.set("vlab:board:{}:port".format(serial), hostport)
+db.set("vlab:board:{}:port".format(serial), host_port)
 db.delete("vlab:board:{}:lock:username".format(serial))
 db.delete("vlab:board:{}:lock:time".format(serial))
 

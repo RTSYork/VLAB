@@ -1,6 +1,12 @@
 #!/usr/bin/env python3
 
-import os, sys, argparse, time, datetime, logging, json
+import argparse
+import datetime
+import json
+import logging
+import os
+import sys
+import time
 import vlabconfig
 
 """
@@ -17,10 +23,10 @@ log.addHandler(ch)
 
 
 def build_parser():
-	mainparser = argparse.ArgumentParser(description='VLAB log parsing')
-	mainparser.add_argument('-f', '--logfile', nargs=1, default=["/vlab/log/access.log"], help='The VLAB access log')
-	mainparser.add_argument('-c', '--configfile', nargs=1, default=["/vlab/vlab.conf"], help='The VLAB config file')
-	return mainparser
+	main_parser = argparse.ArgumentParser(description='VLAB log parsing')
+	main_parser.add_argument('-f', '--logfile', nargs=1, default=["/vlab/log/access.log"], help='The VLAB access log')
+	main_parser.add_argument('-c', '--configfile', nargs=1, default=["/vlab/vlab.conf"], help='The VLAB config file')
+	return main_parser
 
 
 def parseline(line, stats):
@@ -35,20 +41,20 @@ def parseline(line, stats):
 	fields = line.split(';')
 	if len(fields) == 4:
 		if fields[2].strip() == "shell.py":
-			#Read in the timestamp and convert to seconds since the epoch
+			# Read in the timestamp and convert to seconds since the epoch
 			sse = fields[0].strip()
-			try:	
+			try:
 				sse = time.strptime(sse, "%Y-%m-%d %H:%M:%S,%f")
 				sse = time.mktime(sse)
 			except ValueError:
 				return None
 
-			if stats['earliest_date'] == None:
+			if stats['earliest_date'] is None:
 				stats['earliest_date'] = datetime.date.fromtimestamp(sse)
 
 			msg = fields[3].strip()
-			
-			#Messages from shell.py are of the following:
+
+			# Messages from shell.py are of the following:
 			# LOCK: username, boardclass, 3 remaining in set
 			# RELEASE: username, boardclass
 			# NOFREEBOARDS: username, boardclass
@@ -59,26 +65,25 @@ def parseline(line, stats):
 
 				username = params[0].strip()
 				boardclass = params[1].strip()
-				numremaining = None
 
-				#Because it is only possible for a user to have one board of each boardclass locked at
-				#any one time then we can use the combination of those as the map key
-				lockkey = username + boardclass
+				# Because it is only possible for a user to have one board of each boardclass locked at
+				# any one time then we can use the combination of those as the map key
+				lock_key = username + boardclass
 
 				if msg[0].strip() == "LOCK":
-					#Parse the number of boards from that class remaining
+					# Parse the number of boards from that class remaining
 					try:
 						if len(params) == 3:
-							remstr = params[2].strip()
-							if remstr.endswith(" remaining in set"):
-								numremaining = int(remstr[:-len(" remaining in set")])
-
-								#Record the lowest seen value for this
-								if boardclass in stats['minimum_available'] and stats['minimum_available'][boardclass] != None:
-									if stats['minimum_available'][boardclass] > numremaining:
-										stats['minimum_available'][boardclass] = numremaining
+							rem_str = params[2].strip()
+							if rem_str.endswith(" remaining in set"):
+								num_remaining = int(rem_str[:-len(" remaining in set")])
+								# Record the lowest seen value for this
+								if boardclass in stats['minimum_available'] \
+								   and stats['minimum_available'][boardclass] is not None:
+									if stats['minimum_available'][boardclass] > num_remaining:
+										stats['minimum_available'][boardclass] = num_remaining
 								else:
-									stats['minimum_available'][boardclass] = numremaining
+									stats['minimum_available'][boardclass] = num_remaining
 						else:
 							# We didnt have 3 parameters in the lock message
 							return False
@@ -86,28 +91,31 @@ def parseline(line, stats):
 						# The boards remaining parameter didn't parse to an integer
 						return False
 
-					#Now record the lock
-					stats['locks'][lockkey] = sse
+					# Now record the lock
+					stats['locks'][lock_key] = sse
 					if boardclass in stats['total_lock_counts']:
 						stats['total_lock_counts'][boardclass] = stats['total_lock_counts'][boardclass] + 1
 					else:
 						stats['total_lock_counts'][boardclass] = 1
 
 				elif msg[0].strip() == "RELEASE":
-					if lockkey in stats['locks']:
-						duration = sse - stats['locks'][lockkey]
-						#print("Board {} locked by user {} for {} secs".format(boardclass, username, duration))
-						if boardclass in stats['average_locktime_secs'] and stats['average_locktime_secs'][boardclass] != None:
-							stats['average_locktime_secs'][boardclass] = (stats['average_locktime_secs'][boardclass] + duration) / 2
+					if lock_key in stats['locks']:
+						duration = sse - stats['locks'][lock_key]
+						if boardclass in stats['average_locktime_secs'] \
+						   and stats['average_locktime_secs'][boardclass] is not None:
+							stats['average_locktime_secs'][boardclass] = \
+								(stats['average_locktime_secs'][boardclass] + duration) / 2
 						else:
 							stats['average_locktime_secs'][boardclass] = duration
 
-						if username in stats['average_user_locktime_secs'] and stats['average_user_locktime_secs'][username] != None:
-							stats['average_user_locktime_secs'][username] = (stats['average_user_locktime_secs'][username] + duration) / 2
+						if username in stats['average_user_locktime_secs'] \
+						   and stats['average_user_locktime_secs'][username] is not None:
+							stats['average_user_locktime_secs'][username] = \
+								(stats['average_user_locktime_secs'][username] + duration) / 2
 						else:
 							stats['average_user_locktime_secs'][username] = duration
 
-						del(stats['locks'][lockkey])
+						del (stats['locks'][lock_key])
 
 					else:
 						# Releasing a board that isn't locked
@@ -115,22 +123,22 @@ def parseline(line, stats):
 						# We can just ignore it
 						pass
 
-			else: 
-				#There was more than one colon in the message
+			else:
+				# There was more than one colon in the message
 				return False
 
 	return None
 
 
 def main():
-	mainparser = build_parser()
-	args = mainparser.parse_args()
+	main_parser = build_parser()
+	args = main_parser.parse_args()
 
 	if not os.path.isfile(args.logfile[0]):
 		log.critical("Cannot open file: {}".format(args.logfile[0]))
 		sys.exit(1)
 
-	#Set up our statistics
+	# Set up our statistics
 	stats = {
 		'locks': {},
 		'minimum_available': {},
@@ -143,7 +151,7 @@ def main():
 	if os.path.isfile(args.configfile[0]):
 		try:
 			# Open the config file and parse it
-			config = vlabconfig.openlog(log, args.configfile[0])
+			config = vlabconfig.open_log(log, args.configfile[0])
 
 			for user in config['users']:
 				stats['average_user_locktime_secs'][user] = None
@@ -156,7 +164,7 @@ def main():
 			# We can still get useful stats from what is in the log, but we note this error
 			log.critical("Error whilst parsing VLAB config file {}. {}".format(args.configfile[0], e))
 
-	#In case the logfile is enormous, we can use tail to give us a more sensible amount to work with 
+	# In case the logfile is enormous, we can use tail to give us a more sensible amount to work with
 	data = os.popen('tail -n 5000 {}'.format(args.logfile[0])).read()
 	data = data.split('\n')
 	for line in data:
@@ -164,9 +172,9 @@ def main():
 
 	stats['earliest_date'] = stats['earliest_date'].strftime("%Y-%m-%d %H:%M:%S")
 
-	del(stats['locks'])
+	del (stats['locks'])
 	print(json.dumps(stats, indent=4))
+
 
 if __name__ == '__main__':
 	main()
-

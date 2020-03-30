@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
-'''
-Iterate over all boards in the VLAB. For any board which exists but isn't available, check it has 
+"""
+Iterate over all boards in the VLAB. For any board which exists but isn't available, check it has
 a valid lock. If it does, check that the lock has not expired. In any other case, forcibly
 unlock the board. It is intended this is run periodically on the VLAB relay server.
 
@@ -11,16 +11,18 @@ Options:
 -v   Verbose: Print out the names of the boards as they are being checked
 -s   Check connections: Attempt to ping each available boardserver to ensure it is still operational
 
-Regardless of provided options, if a board is found "half locked" or that has been locked for too long, it 
+Regardless of provided options, if a board is found "half locked" or that has been locked for too long, it
 will be freed.
 
 Currently "too long" is defined as MAX_LOCK_TIME below (in seconds).
 
 Ian Gray, 2016
-'''
+"""
 
-import os, sys, getpass, time, socket, argparse
-import redis
+import argparse
+import os
+import socket
+import time
 from vlabredis import *
 
 parser = argparse.ArgumentParser(description="VLAB board test script")
@@ -31,37 +33,38 @@ parsed = parser.parse_args()
 
 MAX_LOCK_TIME = 600
 
-db = connecttoredis('localhost')
 
-def checkSSHConnection(hostname, port):
+def check_ssh_connection(hostname, port):
 	s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 	try:
 		s.connect((hostname, int(port)))
 		rv = True
-	except socket.error as e:
+	except socket.error:
 		rv = False
 	s.close()
 	return rv
 
+
 def log(s, v):
-	if (v and parsed.verbose) or (v == False):
+	if (v and parsed.verbose) or (v is False):
 		print("{} checkboards.py: {}".format(time.strftime("%Y-%m-%d-%H:%M:%S"), s))
 
-def checkLocks(db):
+
+def check_locks(db):
 	for bc in db.smembers("vlab:boardclasses"):
 		log("Boardclass: {}".format(bc), True)
-		if db.get("vlab:boardclass:{}:locking".format(bc)) == None:
+		if db.get("vlab:boardclass:{}:locking".format(bc)) is None:
 			for b in db.smembers("vlab:boardclass:{}:boards".format(bc)):
 				log("\tBoard: {}".format(b), True)
 
-				bd = getBoardDetails(db, b, ["server", "port"])
+				bd = get_board_details(db, b, ["server", "port"])
 				log("\t\tServer: {}:{}".format(bd['server'], bd['port']), True)
 
 				if not db.sismember("vlab:boardclass:{}:unlockedboards".format(bc), b):
 					locker = db.get("vlab:board:{}:lock:username".format(b))
-					locktime = db.get("vlab:board:{}:lock:time".format(b))
+					lock_time = db.get("vlab:board:{}:lock:time".format(b))
 
-					if locker == None or locktime == None:
+					if locker is None or lock_time is None:
 						log("Board {} available but no lock info. Setting available.".format(b), False)
 
 						try:
@@ -69,41 +72,43 @@ def checkLocks(db):
 								cmd = "/opt/xsct/bin/xsdb /vlab/reset.tcl"
 								target = "root@{}".format(bd['server'])
 								keyfile = "/vlab/keys/id_rsa"
-								sshcmd = "ssh -o \"StrictHostKeyChecking no\" -i {} -p {} {} \"{}\"".format(keyfile, bd['port'], target, cmd)
-								os.system(sshcmd)
+								ssh_cmd = "ssh -o \"StrictHostKeyChecking no\" -i {} -p {} {} \"{}\""\
+									.format(keyfile, bd['port'], target, cmd)
+								os.system(ssh_cmd)
 						except Exception as e:
 							log("Exception {} when resetting board {}".format(e, b), False)
 
-						unlockBoard(db, b, bc)
+						unlock_board(db, b, bc)
 					else:
 						# check time
-						log("\t\tLocked by {} at {}.".format(locker, locktime), True)
-						currenttime = int(time.time())
-						if currenttime - int(locktime) > MAX_LOCK_TIME:
+						log("\t\tLocked by {} at {}.".format(locker, lock_time), True)
+						current_time = int(time.time())
+						if current_time - int(lock_time) > MAX_LOCK_TIME:
 							log("Board {} lock timed out. Forced release.".format(b), False)
-							unlockBoard(db, b, bc)
+							unlock_board(db, b, bc)
 				else:
 					log("\t\tAvailable", True)
 		else:
 			log("\tCurrently being locked by a user.", True)
 
 
-def checkSSHToBoards(db):
+def check_ssh_to_boards(db):
 	for bc in db.smembers("vlab:boardclasses"):
 		for board in db.smembers("vlab:boardclass:{}:boards".format(bc)):
-			dets = getBoardDetails(db, board, ['server', 'port'])
-			if not checkSSHConnection(dets['server'], dets['port']):
+			details = get_board_details(db, board, ['server', 'port'])
+			if not check_ssh_connection(details['server'], details['port']):
 				log("Board {} failed SSH connection. Removing.".format(board), False)
 				db.srem("vlab:boardclass:{}:boards".format(bc), board)
 				db.srem("vlab:boardclass:{}:unlockedboards".format(bc), board)
 			else:
-				log("Board {} connection OK.".format(dets['server']), True)
+				log("Board {} connection OK.".format(details['server']), True)
 
 
+redis_db = connect_to_redis('localhost')
 
 if parsed.check_locks:
-	checkLocks(db)
+	check_locks(redis_db)
 
 if parsed.ssh_to_boards:
 	log("Checking SSH connections", True)
-	checkSSHToBoards(db)
+	check_ssh_to_boards(redis_db)

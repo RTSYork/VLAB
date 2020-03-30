@@ -1,16 +1,16 @@
-from flask import Flask, render_template, make_response
-import redis, sys
+import redis
+from flask import Flask, render_template
 
 app = Flask(__name__)
 
 REDIS_HOST = "relay"
 
 
-def getBoardDetails(db, b, details):
-	'''
+def get_board_details(db, b, details):
+	"""
 	Return a dict of key values fetched about the board named b. 'details' is a list of
 	key names to fetch.
-	'''
+	"""
 	rv = {}
 	for detail in details:
 		rv[detail] = db.get("vlab:board:{}:{}".format(b, detail))
@@ -34,7 +34,6 @@ def index():
 
 @app.route('/status/')
 def status():
-
 	try:
 		db = redis.StrictRedis(host=REDIS_HOST, port=6379, db=0, decode_responses=True)
 		db.ping()
@@ -48,7 +47,7 @@ def status():
 		for bc in db.smembers("vlab:boardclasses"):
 			text = text + "Boardclass: {}\n".format(bc)
 
-			if db.get("vlab:boardclass:{}:locking".format(bc)) == None:
+			if db.get("vlab:boardclass:{}:locking".format(bc)) is None:
 
 				if db.scard("vlab:boardclass:{}:boards".format(bc)) == 0:
 					text = text + "\tNo boards.\n"
@@ -56,7 +55,7 @@ def status():
 					for b in db.smembers("vlab:boardclass:{}:boards".format(bc)):
 						text = text + "\tBoard: {}\n".format(b)
 
-						bd = getBoardDetails(db, b, ["server", "port"])
+						bd = get_board_details(db, b, ["server", "port"])
 						text = text + "\t\tServer: {}:{}\n".format(bd['server'], bd['port'])
 
 						if not db.sismember("vlab:boardclass:{}:unlockedboards".format(bc), b):
@@ -70,6 +69,6 @@ def status():
 
 	return render_template('index.html', text=text)
 
-if __name__ == '__main__':
-	app.run(debug=True,host='0.0.0.0')
 
+if __name__ == '__main__':
+	app.run(debug=True, host='0.0.0.0')

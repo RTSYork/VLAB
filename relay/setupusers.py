@@ -1,40 +1,44 @@
 #!/usr/bin/env python3
 
-'''
+"""
 Reads a list of users from CONFIGFILE and populates the redis database with them.
 Also checks that each named user has an associated system user account with appropriate shell.
-'''
+"""
 
-import json, sys, os, time, subprocess, shutil, logging
+import logging
+import os
+import shutil
+import subprocess
+import sys
+import time
 import redis
 import vlabconfig
 
-CONFIGFILE='/vlab/vlab.conf'
+CONFIG_FILE = '/vlab/vlab.conf'
 
-logging.basicConfig(filename='/vlab/log/relay.log', level=logging.INFO, format='%(asctime)s ; %(levelname)s ; %(name)s ; %(message)s')
+logging.basicConfig(
+	filename='/vlab/log/relay.log',	level=logging.INFO,	format='%(asctime)s ; %(levelname)s ; %(name)s ; %(message)s')
 log = logging.getLogger(os.path.basename(sys.argv[0]))
 
 log.info("Begin relay server start up.")
 
-
 # Open the config file and parse it
-config = vlabconfig.openlog(log, CONFIGFILE)
-log.info("{} parsed successfully.".format(CONFIGFILE))
+config = vlabconfig.open_log(log, CONFIG_FILE)
+log.info("{} parsed successfully.".format(CONFIG_FILE))
 users = config['users']
 
 # As we are started at the same time as the redis server it may time some time for it to become available
-connectionattempts = 1
+connection_attempts = 1
 while True:
 	try:
 		db = redis.StrictRedis(host='localhost', port=6379, db=0, decode_responses=True)
 		db.ping()
 		break
 	except redis.exceptions.ConnectionError as c:
-		log.info("Connection to redis server failed. Retrying...({}/5)".format(connectionattempts))
+		log.info("Connection to redis server failed. Retrying...({}/5)".format(connection_attempts))
 		time.sleep(2)
-
-	connectionattempts = connectionattempts + 1
-	if connectionattempts > 5:
+	connection_attempts = connection_attempts + 1
+	if connection_attempts > 5:
 		log.critical("Cannot connect to the redis server. Aborting.")
 		sys.exit(6)
 
@@ -53,7 +57,8 @@ try:
 		if os.path.isfile("/vlab/keys/{}.pub".format(user)):
 			log.info("\tAdding user: {}".format(user))
 			try:
-				useradd_output = subprocess.check_output(["useradd", "-m", "--shell", "/vlab/shell.py", "{}".format(user)])
+				useradd_output = subprocess.check_output(
+					["useradd", "-m", "--shell", "/vlab/shell.py", "{}".format(user)])
 			except subprocess.CalledProcessError as e:
 				log.critical("CalledProcessError calling useradd. Message: {}".format(e.output))
 				sys.exit(52)
@@ -79,7 +84,6 @@ for board in config['boards'].keys():
 	db.set("vlab:knownboard:{}:type".format(board), config['boards'][board]['type'])
 	if 'reset' in config['boards'][board]:
 		db.set("vlab:knownboard:{}:reset".format(board), config['boards'][board]['reset'])
-
 
 # And finally our free port number
 db.set("vlab:port", 30000)
