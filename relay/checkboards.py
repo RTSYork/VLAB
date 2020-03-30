@@ -81,7 +81,7 @@ def check_locks(db):
 						unlock_board(db, b, bc)
 					else:
 						# check time
-						log("\t\tLocked by {} at {}.".format(locker, lock_time), True)
+						log("\t\tLocked by {} at {} until {}.".format(locker, lock_time, int(lock_time) + MAX_LOCK_TIME), True)
 						current_time = int(time.time())
 						if current_time - int(lock_time) > MAX_LOCK_TIME:
 							log("Board {} lock timed out. Forced release.".format(b), False)
@@ -96,12 +96,14 @@ def check_ssh_to_boards(db):
 	for bc in db.smembers("vlab:boardclasses"):
 		for board in db.smembers("vlab:boardclass:{}:boards".format(bc)):
 			details = get_board_details(db, board, ['server', 'port'])
-			if not check_ssh_connection(details['server'], details['port']):
-				log("Board {} failed SSH connection. Removing.".format(board), False)
+			server = details['server']
+			port = details['port']
+			if not check_ssh_connection(server, port):
+				log("Board {} on {}:{} failed SSH connection. Removing.".format(board, server, port), False)
 				db.srem("vlab:boardclass:{}:boards".format(bc), board)
 				db.srem("vlab:boardclass:{}:unlockedboards".format(bc), board)
 			else:
-				log("Board {} connection OK.".format(details['server']), True)
+				log("Board {} on {}:{} connection OK.".format(board, server, port), True)
 
 
 redis_db = connect_to_redis('localhost')
