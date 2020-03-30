@@ -26,8 +26,8 @@ ADD authorized_keys /root/.ssh/
 RUN chmod 700 /root/.ssh
 RUN chmod 600 /root/.ssh/authorized_keys
 
-#Prevent locales from being forwarded to the boardserver
-ADD sshd_config /etc/ssh/
+# Prevent locales from being forwarded to the boardserver SSH session
+RUN sed -i 's/^AcceptEnv LANG LC_\\*/#AcceptEnv LANG LC_\\*/' /etc/ssh/sshd_config
 
 # Scripts
 ADD supervisord.conf /etc/supervisor/conf.d/supervisord.conf
