@@ -32,7 +32,7 @@ These containers can be hosted on any physical server, and may be all the same s
 
 ## Client Installation and Use
 
-The client script (`vlab.py`) can be downloaded directly from [Github](https://raw.githubusercontent.com/RTSYork/VLAB/master/vlab.py). It has no external dependencies, apart from [Python 3](https://www.python.org/downloads/) itself. 
+The client script (`vlab.py`) can be downloaded directly from [GitHub](https://raw.githubusercontent.com/RTSYork/VLAB/master/vlab.py). It has no external dependencies, apart from [Python 3](https://www.python.org/downloads/) itself. 
 
 To use the client you must have a keyfile which should have been sent to the client by the VLAB administrator. Connect to the VLAB using:
 
@@ -294,6 +294,13 @@ Now when a user connects or disconnects from the defined board, a full system re
 
 ## Common Issues
 
-### Asking for root password when relay connects to the boardserver
-This happens when the relay cannot read the `keys/id_rsa` key, which is used for host key authentication between the `relay` and `boardserver` containers. Ensure that the keys in `/keys/` are readable by the Docker user.
+### Asking for root password when relay connects to the board server
+This happens when the relay cannot read the `keys/id_rsa` key, which is used for authentication between the `relay` and `boardserver` containers. Ensure that the keys in `/keys/` are readable by the relay Docker container.
 
+### Asking for vlab password when relay connects to the board host
+This can happen when the relay cannot read the `keys/id_rsa` key, which is used for authentication. Ensure that the keys in `/keys/` are readable by the relay Docker container.
+Also check that the correct public key file has been installed with appropriate permissions to `/home/vlab/.ssh/authorized_keys` on the board host.
+
+### Permission denied: '/vlab/log/access.log'
+This error can happen when trying to access the VLAB or run any command that writes to a log from the relay.
+Ensure that the `log` directory inside the VLAB folder (or just the log files, if they are already created) is writable from the Docker container.
