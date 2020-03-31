@@ -78,7 +78,10 @@ This will construct a keypair which is used by the relay server to communicate w
 
 This command creates a keypair for all users that are mentioned in `vlab.conf` and does not already have a key pair in the `/keys/` directory. These are stored as `/keys/$username` and `/keys/$username.pub` for the private and public keys respectively. The user needs the private key in order to use the VLAB. Should you need to recreate these, you can simply delete the pair and rerun `generatekeys --allnew`. 
 
-Once configuration and keys are set up, build the VLAB containers with:
+Before building the Docker containers, the Xilinx Hardware Server archive must be downloaded so it can be installed into the board server container.
+Download the [Vivado 64-bit Hardware Server for Linux](https://www.xilinx.com/support/download/index.html/content/xilinx/en/downloadNav/vivado-design-tools.html) for the edition of the Xilinx tools you are using (use the latest relevant version if using the VLAB with multiple Xilinx installs) and place the `Xilinx_HW_Server_Lin_xxxx.x_xxxx_xxxx.tar.gz` file in the boardserver folder within the VLAB repository.
+
+Once configuration and keys are set up and the hardware server archive is in place, build the VLAB containers with:
 
 ```
 ./manage.py build
@@ -90,7 +93,10 @@ This instructs Docker to build the images for the relay server, web server, and 
 ./manage.py start
 ```
 
-The images will need to be rebuilt if changes are make to the internal keypair, but changes to the configuration or user keypairs only require the containers to be restarted. You likely want to configure the VLAB containers to start automatically on boot. There are many way to do this [covered in the Docker documentation](https://docs.docker.com/engine/admin/host_integration/). For example, on a `systemd`-based system, create the file `/etc/systemd/system/vlab.service`:
+The images will need to be rebuilt if changes are make to the internal keypair, but changes to the configuration or user keypairs only require the containers to be restarted.
+The board server image will need rebuilding and re-loading onto the board hosts if you need to update the Xilinx Hardware Server version.
+
+You likely want to configure the VLAB containers to start automatically on boot. There are many way to do this [covered in the Docker documentation](https://docs.docker.com/engine/admin/host_integration/). For example, on a `systemd`-based system, create the file `/etc/systemd/system/vlab.service`:
 
 ```
 [Unit]
@@ -106,6 +112,7 @@ ExecStop=/usr/local/bin/docker-compose -f /opt/VLAB/docker-compose.yml stop
 [Install]
 WantedBy=default.target
 ```
+
 The service can be started and stopped with `systemctl start vlab.service` and `systemctl stop vlab.service`, or made to restart every boot with `systemctl enable vlab.service`.
 
 Clients will `ssh` to the `relay` container hosted here, so its port (2222 by default) should be externally-visible. If you need to use another port then you can edit the port mapping for the relay service in `docker-compose.yml`. Change the line:
@@ -128,6 +135,7 @@ This line says that port 22 in the container should be mapped to port 2222 on th
 As well as Docker, the board host server depends on Python 3 and the 'redis' package, and certain FPGA configurations require the fxload firmware downloader and libusb.
 
 From a standard Ubuntu Server 18.04 installation, these can be installed with:
+
 ```
 sudo apt install fxload libusb-dev python3-redis
 ```
@@ -257,23 +265,31 @@ In this example there is one board with a serial number `exampleboardserialnumbe
 
 
 ## Resetting boards on disconnect
-When a user disconnects from an FPGA their design will remain active. The VLAB also supports shutting down a hosted FPGA when the user disconnects. This can be useful if, for example, the board is connected to an Ethernet network and so it is not desirable to have designs active when they are not being tested.
+When a user disconnects from an FPGA their design will remain active.
+The VLAB also supports shutting down a hosted FPGA when the user disconnects.
+This can be useful if, for example, the board is connected to an Ethernet network and so it is not desirable to have designs active when they are not being tested.
 
-Resetting the boards requires that the `boardserver` containers have access to the Xilinx command line tools, by installing them on each board host. These can be installed by installing [Xilinx SDK](https://www.xilinx.com/products/design-tools/embedded-software/sdk.html) and choosing `XSCT`. 
+Resetting the boards requires that the `boardserver` containers have access to the Xilinx command line tools, by installing them on each board host (see above). 
 
-Once installed, create a symlink on the board host called `xsct` in `/opt/VLAB/` which points to the SDK Xilinx install folder. For example (change if your install paths are non-default):
+Once installed, create a symlink on the board host called `xsct` in `/opt/VLAB/` which points to the Xilinx SDK install folder.
+The board host install script will create this symlink automatically if the path to the Xilinx tools is is specified as an argument.
 
-    ln -s /opt/Xilinx/SDK/2016.4 /opt/VLAB/xsct 
+To create this symlink this manually, run the following (change if your install paths or version are different):
+
+```
+sudo ln -s /tools/Xilinx/SDK/2019.1 /opt/VLAB/xsct 
+```
+
 
 Then add `"reset: "true"` to the board definition in `vlab.conf`. For example
 
 ```
 "boards": {
-		"210279777433": {"class": "vlab_zybo", "type": "zybo", "reset": "true"}
+	"210279777433": {"class": "vlab_zybo", "type": "zybo", "reset": "true"}
 }
 ```
 
-Now when a user disconnects from the defined board, a full system reset will be issued, and in the case of Zynq-based boards the ARM cores shut down.
+Now when a user connects or disconnects from the defined board, a full system reset will be issued, and in the case of Zynq-based boards the ARM cores shut down.
 
 
 ## Common Issues
