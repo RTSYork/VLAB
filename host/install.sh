@@ -1,7 +1,9 @@
-#!/bin/sh
+#!/bin/bash
 
 # This script installs the necessary files to set up a VLAB board host.
 # It must be executed with administrative privileges.
+# Usage example:
+#   sudo ./install.sh /tools/Xilinx/SDK/2019.1
 
 echo "Installing files..."
 
@@ -12,8 +14,12 @@ for f in *; do
 	fi
 done
 
-# Modify this symlink based on where the Xilinx SDK tools have been installed
-ln -s /opt/Xilinx/SDK/2016.4 /opt/VLAB/xsct
+if [ $# -eq 0 ]; then
+  echo "No Xilinx SDK path supplied, skipping xsct symlink creation."
+  echo "Manually create an 'xsct' symlink in /opt/VLAB to the SDK install path, or run this script again with the path supplied."
+else
+  ln -s $1 /opt/VLAB/xsct
+fi
 
 echo "
 Install completed.

@@ -127,7 +127,7 @@ This line says that port 22 in the container should be mapped to port 2222 on th
 
 As well as Docker, the board host server depends on Python 3 and the 'redis' package, and certain FPGA configurations require the fxload firmware downloader and libusb.
 
-From a standard Ubuntu Server 16.04 installation, these can be installed with:
+From a standard Ubuntu Server 18.04 installation, these can be installed with:
 ```
 sudo apt install fxload libusb-dev python3-redis
 ```
@@ -140,47 +140,70 @@ To set up a board host, first send the boardserver Docker image from where you b
 
 ```
 docker save -o boardserver.tar vlab/boardserver
-scp boardserver.tar newboardhost:~/
+scp boardserver.tar newboardhost:
 ```
 
-Then clone the `host` directory to the new board host, load the image, and run the `install.sh` script.
+then load the image into Docker on the board host:
 
 ```
-docker load -i ~/boardserver.tar
-cd host
-sudo ./install.sh
+docker load -i boardserver.tar
 ```
 
-You must create a `vlab` user on the boardhost which has access to the `Docker` group. On the new board server:
+You must also create a `vlab` user on the board host which has access to the `docker` group.
+For example, on the new board host:
 
 ```
-adduser vlab
-usermod -a -G docker vlab
-mkdir /home/vlab/.ssh
-chown vlab:vlab /home/vlab/.ssh
-chmod 700 /home/vlab/.ssh
+sudo adduser vlab
+sudo usermod -a -G docker vlab
+sudo mkdir /home/vlab/.ssh
+sudo chown vlab:vlab /home/vlab/.ssh
+sudo chmod 700 /home/vlab/.ssh
 ```
 
-And copy the internal VLAB public key for that user.
+And copy the internal VLAB public key for that user. From the relay server where the keys were generated:
 
 ```
-scp boardserver/authorized_keys vlab@newboardserver:~/.ssh/
+scp boardserver/authorized_keys vlab@newboardserver:.ssh/
 ```
 
-Finally, if you wish to use Digilent's boards on your board host you need to install the Digilent tools. Go to the [Digilent website](https://reference.digilentinc.com/reference/software/adept/start) and download the Runtime and Utilities. This example describes using the `.zip` versions. As root:
+If you wish to use Digilent's boards on your board host you need to install the Digilent tools.
+Go to the [Digilent website](https://reference.digilentinc.com/reference/software/adept/start) and download the Runtime and Utilities.
+These can be installed using standard methods from DEB or RPM packages (recommended), or from the `.zip` version as follows:
 
 ```
 unzip digilent.adept.runtime_*.zip
 unzip digilent.adept.utilities_*.zip
-mkdir -p /etc/hotplug/usb/
+sudo mkdir -p /etc/hotplug/usb/
 cd digilent.adept.runtime_*/
-./install.sh silent=1
+sudo ./install.sh silent=1
 cd ../digilent.adept.utilities_*/
-yes "" | ./install.sh 
+yes "" | sudo ./install.sh 
 ```
 
 This should add a utility called `dadutil` to your `$PATH` which can be used to enumerate Digilent boards connected to the board host.
 
+The VLAB scripts also require the [Xilinx Software Command-line Tool (XSCT)](https://www.xilinx.com/html_docs/xilinx2019_1/SDK_Doc/xsct/intro/xsct_install_launch_linux.html) installed on the board host, which is mapped into the board server container and used to reset FPGA boards on connection/disconnection.
+This can be installed using the [Xilinx Software Development Kit Standalone WebInstall Client](https://www.xilinx.com/support/download/index.html/content/xilinx/en/downloadNav/vitis/archive-sdk.html), which is freely downloadable but requires registering a Xilinx login.
+
+To install these tools from the command line (to `/tools/Xilinx`), run the following:
+
+```
+sudo mkdir /tools
+sudo chown $USER:$USER /tools
+chmod +x Xilinx_SDK_2019.1_0524_1430_Lin64.bin
+./Xilinx_SDK_2019.1_0524_1430_Lin64.bin -- -b AuthTokenGen
+./Xilinx_SDK_2019.1_0524_1430_Lin64.bin -- -a XilinxEULA,3rdPartyEULA,WebTalkTerms -b Install -e "Xilinx\ Software\ Command-Line\ Tool\ \(XSCT\)"
+``` 
+
+Then clone/download the `host` directory from this repository to the new board host, and run the `install.sh` script with the path to the installed Xilinx SDK tools.
+For example:
+
+```
+cd host
+sudo ./install.sh /tools/Xilinx/SDK/2019.1
+```
+
+Finally, edit the `/opt/VLAB/boardhost.conf` to set the hostname/IP and port of the relay server.
 
 #### Supporting FPGA Boards on the Board Hosts
 
