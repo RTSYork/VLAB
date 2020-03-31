@@ -27,10 +27,7 @@ RUN chmod 700 /root/.ssh
 RUN chmod 600 /root/.ssh/authorized_keys
 
 # Prevent locales from being forwarded to the boardserver SSH session
-RUN sed -i 's/^AcceptEnv LANG LC_\\*/#AcceptEnv LANG LC_\\*/' /etc/ssh/sshd_config
-
-# Disable IPv6 SSH connections (should remove errors about 'bind: Cannot assign requested address')
-RUN sed -i 's/^#AddressFamily any/AddressFamily inet/' /etc/ssh/sshd_config
+RUN sed -i 's/^AcceptEnv LANG LC_/#AcceptEnv LANG LC_/' /etc/ssh/sshd_config
 
 # Scripts
 ADD supervisord.conf /etc/supervisor/conf.d/supervisord.conf

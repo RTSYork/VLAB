@@ -135,7 +135,7 @@ screenrc = "defhstatus \\\"{} (VLAB Shell)\\\"\\ncaption always\\ncaption string
 	.format(boardclass, username, lock_end, boardclass, board_details['server'])
 cmd = "echo -e '{}' > /vlab/vlabscreenrc; screen -c /vlab/vlabscreenrc -qdRR - /dev/ttyFPGA 115200; killall -q screen"\
 	.format(screenrc)
-ssh_cmd = "ssh {} -o \"StrictHostKeyChecking no\" -e none -i {} -p {} -tt {} \"{}\""\
+ssh_cmd = "ssh -4 {} -o \"StrictHostKeyChecking no\" -e none -i {} -p {} -tt {} \"{}\""\
 	.format(tunnel, keyfile, board_details['port'], target, cmd)
 rv = os.system(ssh_cmd)
 
