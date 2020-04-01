@@ -106,8 +106,8 @@ After=docker.service
 
 [Service]
 Restart=always
-ExecStart=/usr/local/bin/docker-compose -f /opt/VLAB/docker-compose.yml up --force-recreate
-ExecStop=/usr/local/bin/docker-compose -f /opt/VLAB/docker-compose.yml stop
+ExecStart=/usr/bin/docker-compose -f /opt/VLAB/docker-compose.yml up --force-recreate
+ExecStop=/usr/bin/docker-compose -f /opt/VLAB/docker-compose.yml stop
 
 [Install]
 WantedBy=default.target
@@ -124,7 +124,7 @@ Clients will `ssh` to the `relay` container hosted here, so its port (2222 by de
 This line says that port 22 in the container should be mapped to port 2222 on the host machine. If another port is required it can be changed. Remember that users will have to use the `-p` option to specify the non-default port:
 
 ```
-./client.py -r relayserver.local -p 2223 -k ./mykey.key -b zynq 
+./vlab.py -r relayserver -p 2223 -k mykey.vlabkey -b zybo
 ```
 
 
