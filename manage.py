@@ -98,12 +98,22 @@ def main():
 			print("Generating new internal key pair...")
 			remove_if_exists("keys/id_rsa")
 			remove_if_exists("keys/id_rsa.pub")
-			os.system('ssh-keygen -q -N "" -f keys/id_rsa')
+			os.system("ssh-keygen -q -N '' -f keys/id_rsa")
 			os.system("cp keys/id_rsa.pub boardserver/authorized_keys")
+			print("Generating new SSH host keys for relay server...")
+			remove_if_exists("keys/ssh_host_rsa_key")
+			remove_if_exists("keys/ssh_host_rsa_key.pub")
+			remove_if_exists("keys/ssh_host_ed25519_key")
+			remove_if_exists("keys/ssh_host_ed25519_key.pub")
+			remove_if_exists("keys/ssh_host_ecdsa_key")
+			remove_if_exists("keys/ssh_host_ecdsa_key.pub")
+			os.system("ssh-keygen -q -t rsa -b 4096 -N '' -f keys/ssh_host_rsa_key")
+			os.system("ssh-keygen -q -t ed25519 -N '' -f keys/ssh_host_ed25519_key")
+			os.system("ssh-keygen -q -t ecdsa -b 521 -N '' -f keys/ssh_host_ecdsa_key")
 			print("Creating 'VLAB keys owner' user and setting key permissions (requires root)...")
 			os.system("sudo useradd -M -d /nonexistent -s /usr/sbin/nologin -u 50000 vlab_keys_owner")
-			os.system('sudo chown 50000:50000 keys/id_rsa keys/id_rsa.pub')
-			os.system('sudo chmod 444 keys/id_rsa keys/id_rsa.pub')
+			os.system("sudo chown 50000:50000 keys/id_rsa keys/id_rsa.pub keys/ssh_host_*_key keys/ssh_host_*_key.pub")
+			os.system("sudo chmod 444 keys/id_rsa keys/id_rsa.pub keys/ssh_host_*_key keys/ssh_host_*_key.pub")
 			print("Keys generated. Now run: {} build".format(sys.argv[0]))
 		elif args.allnew:
 			for user, _ in config['users'].items():
@@ -128,9 +138,9 @@ def main():
 		os.system("docker exec vlab_relay_1 python3 /vlab/checkboards.py -v")
 
 	elif args.mode == "status":
-		print("****************************************")
+		print("**********************************************")
 		print("Current VLAB Status at", current_time())
-		print("****************************************")
+		print("**********************************************")
 		# First pass to ping SSH on each board server from the relay
 		subprocess.run(['docker', 'exec', 'vlab_relay_1', 'python3', '/vlab/checkboards.py', '-vs'],
 		               stdout=subprocess.PIPE)
@@ -140,7 +150,7 @@ def main():
 		result_text = result.stdout.decode('utf-8')
 		output = parse_checkboards_output(result_text)
 		print(output)
-		print("****************************************")
+		print("**********************************************")
 
 	elif args.mode == "stats":
 		os.system("docker exec vlab_relay_1 python3 /vlab/logparse.py")

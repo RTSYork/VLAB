@@ -18,6 +18,12 @@ services:
     volumes:
       - "./vlab.conf:/vlab/vlab.conf:ro"
       - "./keys:/vlab/keys/:ro"
+      - "./keys/ssh_host_rsa_key:/etc/ssh/ssh_host_rsa_key:ro"
+      - "./keys/ssh_host_rsa_key.pub:/etc/ssh/ssh_host_rsa_key.pub:ro"
+      - "./keys/ssh_host_ed25519_key:/etc/ssh/ssh_host_ed25519_key:ro"
+      - "./keys/ssh_host_ed25519_key.pub:/etc/ssh/ssh_host_ed25519_key.pub:ro"
+      - "./keys/ssh_host_ecdsa_key:/etc/ssh/ssh_host_ecdsa_key:ro"
+      - "./keys/ssh_host_ecdsa_key.pub:/etc/ssh/ssh_host_ecdsa_key.pub:ro"
       - "./log:/vlab/log/:rw"
     environment:
       - TZ=Europe/London
