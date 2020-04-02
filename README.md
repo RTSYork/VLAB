@@ -133,11 +133,12 @@ This line says that port 22 in the container should be mapped to port 2222 on th
 #### Prerequisites
 
 As well as Docker, the board host server depends on Python 3 and the 'redis' package, and certain FPGA configurations require the fxload firmware downloader and libusb.
+Task Spooler (`tsp`) is also required for queueing requests to register and deregister boards with the relay server as they are connected and disconnected.
 
 From a standard Ubuntu Server 18.04 installation, these can be installed with:
 
 ```
-sudo apt install fxload libusb-dev python3-redis
+sudo apt install fxload libusb-dev python3-redis task-spooler
 ```
 
 #### Installation

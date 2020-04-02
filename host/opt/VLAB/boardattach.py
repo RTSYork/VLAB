@@ -38,8 +38,6 @@ serial = sys.argv[1]
 
 log.info("VLAB device {} connected.".format(serial))
 
-time.sleep(2)
-
 redis_server = "localhost"
 redis_port = 6379
 
