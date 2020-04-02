@@ -14,6 +14,9 @@ for f in *; do
 	fi
 done
 
+echo "Reloading udev rules..."
+udevadm control --reload
+
 if [ $# -eq 0 ]; then
   echo "No Xilinx SDK path supplied, skipping xsct symlink creation."
   echo "Manually create an 'xsct' symlink in /opt/VLAB to the SDK install path, or run this script again with the path supplied."
