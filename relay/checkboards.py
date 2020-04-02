@@ -99,9 +99,19 @@ def check_ssh_to_boards(db):
 			server = details['server']
 			port = details['port']
 			if not check_ssh_connection(server, port):
-				log("Board {} on {}:{} failed SSH connection. Removing.".format(board, server, port), False)
-				db.srem("vlab:boardclass:{}:boards".format(bc), board)
-				db.srem("vlab:boardclass:{}:unlockedboards".format(bc), board)
+				log("Board {} on {}:{} failed SSH connection. Waiting 2 seconds and checking again..."
+				    .format(board, server, port), False)
+				time.sleep(2.0)
+				if not check_ssh_connection(server, port):
+					details = get_board_details(db, board, ['server', 'port'])
+					server = details['server']
+					port = details['port']
+					log("Board {} on {}:{} failed SSH connection. Removing from database."
+					    .format(board, server, port), False)
+					db.srem("vlab:boardclass:{}:boards".format(bc), board)
+					db.srem("vlab:boardclass:{}:unlockedboards".format(bc), board)
+				else:
+					log("Board {} on {}:{} connection OK.".format(board, server, port), True)
 			else:
 				log("Board {} on {}:{} connection OK.".format(board, server, port), True)
 
