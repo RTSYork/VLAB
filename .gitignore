@@ -117,11 +117,14 @@ Temporary Items
 .apdisk
 
 # Files in root directory that may be added after install
-/boardconnected.py
-/boarddetached.py
+/boardattach.sh
+/boardattach.py
+/boarddetach.sh
+/boarddetach.py
 /boardrestart.py
-/boardhost.conf
+/boardevent.sh
 /boardscan.sh
+/boardhost.conf
 /boardserver.tar
 /*.conf.backup*
 /xsct
