@@ -26,7 +26,7 @@ from subprocess import Popen, PIPE
 ############################
 # Update version string here and in 'current_version' file when updating this script
 # Version number must be in 'x.y.z' format
-current_version = '1.0.1'
+current_version = '1.1.0'
 current_branch = 'master'
 ############################
 
@@ -103,7 +103,7 @@ else:
 print("Using tunnel port {}".format(ephemeral_port))
 
 # Now create the actual connection
-ssh_cmd = "ssh -L {}:localhost:{} -o \"StrictHostKeyChecking no\" -e none -i {} -p {} -tt {}@{} {}:{}".format(
+ssh_cmd = "ssh -L 9001:localhost:9001 -L {}:localhost:{} -o \"StrictHostKeyChecking no\" -e none -i {} -p {} -tt {}@{} {}:{}".format(
 	parsed.localport[0],
 	ephemeral_port,
 	parsed.key[0],
