@@ -15,6 +15,7 @@ services:
     ports:
       - "6379:6379"
       - "2222:22"
+      - "9001:9001"
     volumes:
       - "./vlab.conf:/vlab/vlab.conf:ro"
       - "./keys:/vlab/keys/:ro"
@@ -25,5 +26,6 @@ services:
       - "./keys/ssh_host_ecdsa_key:/etc/ssh/ssh_host_ecdsa_key:ro"
       - "./keys/ssh_host_ecdsa_key.pub:/etc/ssh/ssh_host_ecdsa_key.pub:ro"
       - "./log:/vlab/log/:rw"
+      - "./weblog.log:/vlab/weblog.log:ro"
     environment:
       - TZ=Europe/London
