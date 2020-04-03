@@ -218,15 +218,23 @@ Finally, edit the `/opt/VLAB/boardhost.conf` to set the hostname/IP and port of 
 
 When a new FPGA board is connected to a board host the following takes place:
 
-1. udev recognises a device connection event and starts executing its rules (in `/etc/udev/rules.d/`)
-2. The appropriate rule executes `/opt/VLAB/boardconnected.py` and passes it the serial number.
-3. `boardconnected.py` sends the serial number to the `relay` server, which looks it up to see if it is a device detailed in `vlab.conf`.
-4. If not, the unknown device is rejected and logged.
-5. If it is, the `relay` server informs `boardconnected.py` which type of device it is, and so which container should be launched to host it. Currently only one type of container is required, but more diverse boards may require other containers in the future.
+1. udev recognises a device connection event for both the TTY and JTAG, and starts executing its rules (in `/etc/udev/rules.d/`).
+2. The appropriate rule executes `/opt/VLAB/boardevent.sh attach` and passes it the serial number. The script is executed asynchronously through the `at now` command, in order to break out of udev's network sandbox.
+3. The `boardevent.sh attach` script schedules the execution of `boardattach.sh` using [Task Spooler](http://manpages.ubuntu.com/manpages/bionic/man1/tsp.1.html), to ensure an orderly FIFO queue of attach events.
+4. When run from the spool queue, `boardattach.sh` checks to see if the board's Docker container has already been started by other means, and if not runs `boardattach.py`.
+5. `boardattach.py` sends the serial number to the relay server, which looks it up to see if it is a device detailed in `vlab.conf`, and if so registers it.
+    - If not, the unknown device is rejected and logged.
+    - If it is, the relay server informs `boardconnected.py` which type of device it is, and so which container should be launched to host it. Currently only one type of container is required, but more diverse boards may require other containers in the future.
 
-Consequentially, each supported FPGA must have a unique serial number, and that serial number must be readable by udev. It is often in fact the case that all FPGA development boards of the same type come from the factory with the same serial number a utility program is required to set a serial number first.
+Upon board disconnection (according to udev), the board host will kill the associated board server container and deregister it from the relay server.  
 
+Each supported FPGA must have a unique serial number, and that serial number must be readable by udev (and must match for both JTAG and TTY devices)
+It is sometimes the case that all FPGA development boards of the same type come from the factory with the same serial number, so a utility program may be required to set a unique serial number first.
 Instructions to program JTAG and UART serials on certain boards can be found at <https://wiki.york.ac.uk/display/RTS/Setting+Up+FPGA+Boards>.
+
+The board host also runs a cronjob each minute to try to register any board that are attached but don't have board server containers running for them.
+Each board server container will also periodically attempt to re-register with the relay server each minute using a cronjob.
+The relay server will attempt to SSH to each of its registered board servers each minute, and remove any that are unreachable.
 
 
 ## Configuration
