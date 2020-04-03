@@ -63,7 +63,7 @@ try:
 				log.critical("CalledProcessError calling useradd. Message: {}".format(e.output))
 				sys.exit(52)
 			else:
-				log.info("\nuseradd complete.")
+				log.info("\tuseradd complete.")
 			log.info("\tAdding keys for user: {}".format(user))
 			os.mkdir("/home/{}/.ssh".format(user))
 			shutil.copyfile("/vlab/keys/{}.pub".format(user), "/home/{}/.ssh/authorized_keys".format(user))
