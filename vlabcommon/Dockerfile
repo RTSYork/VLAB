@@ -1,8 +1,7 @@
 FROM ubuntu:bionic
 
 # Prerequisites
-RUN apt-get update; DEBIAN_FRONTEND=noninteractive apt-get install -y openssh-server supervisor python3-pip cron tzdata
-RUN pip3 install redis
+RUN apt-get update; DEBIAN_FRONTEND=noninteractive apt-get install -y openssh-server supervisor python3-redis cron tzdata
 
 # Enable SSH daemon
 RUN mkdir -p /var/log/supervisor /root/.ssh /var/run/sshd
