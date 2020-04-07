@@ -134,8 +134,8 @@ tunnel = "-L {}:localhost:3121".format(tunnel_port)
 keyfile = "{}{}".format(KEYS_DIR, "id_rsa")
 target = "root@{}".format(board_details['server'])
 screenrc = "defhstatus \\\"{} (VLAB Shell)\\\"\\ncaption always\\ncaption string \\\" VLAB Shell [ User: {} | Lock " \
-           "expires: {} | Board class: {} | Board server: {} ]\\\""\
-	.format(boardclass, username, lock_end, boardclass, board_details['server'])
+           "expires: {} | Board class: {} | Board serial: {} | Server: {} ]\\\""\
+	.format(boardclass, username, lock_end, boardclass, board, board_details['server'])
 cmd = "echo -e '{}' > /vlab/vlabscreenrc; screen -c /vlab/vlabscreenrc -qdRR - /dev/ttyFPGA 115200; killall -q screen"\
 	.format(screenrc)
 ssh_cmd = "ssh -4 {} -o \"StrictHostKeyChecking no\" -e none -i {} -p {} -tt {} \"{}\""\
