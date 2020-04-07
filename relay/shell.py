@@ -111,6 +111,10 @@ lock_start = time.strftime("%H:%M:%S %Z", time.localtime(locktime))
 lock_end = time.strftime("%d/%m/%y AT %H:%M:%S %Z", time.localtime(locktime + MAX_LOCK_TIME))
 print("Locked board '{}' of type '{}' for user '{}' at {} for {} seconds"
       .format(board, boardclass, username, lock_start, MAX_LOCK_TIME))
+print("********************************************************************************************")
+print("*              YOUR EXCLUSIVE BOARD LOCK EXPIRES ON {}               *".format(lock_end))
+print("* AFTER THIS TIME SOMEBODY ELSE MIGHT BE ALLOCATED YOUR BOARD AND YOU WILL BE DISCONNECTED *")
+print("********************************************************************************************")
 
 # All done. First restart the target container
 target = "vlab@{}".format(board_details['server'])
@@ -120,14 +124,9 @@ ssh_cmd = "ssh -o \"StrictHostKeyChecking no\" -e none -i {} {} \"{}\"".format(k
 print("Restarting target container...")
 os.system(ssh_cmd)
 
-print("********************************************************************************************")
-print("*              YOUR EXCLUSIVE BOARD LOCK EXPIRES ON {}               *".format(lock_end))
-print("* AFTER THIS TIME SOMEBODY ELSE MIGHT BE ALLOCATED YOUR BOARD AND YOU WILL BE DISCONNECTED *")
-print("********************************************************************************************")
-time.sleep(2)
-
 # Execute the bounce command
 print("Connecting to board server...")
+time.sleep(2)
 
 # Port details might have changed
 board_details = get_board_details(db, board, ["user", "server", "port"])
