@@ -135,7 +135,7 @@ else:
 	ephemeral_port = None
 	err("Invalid reply from VLAB server. Message too short.\n{}".format(error_info))
 
-print("Using tunnel port {}".format(ephemeral_port))
+print("Tunnelling to relay server '{}' using port {}...".format(parsed.relay[0], ephemeral_port))
 
 # Now create the actual connection
 ssh_cmd = "ssh -L 9001:localhost:9001 -L {}:localhost:{} -o \"StrictHostKeyChecking no\" -e none -i {} -p {} -tt {}@{} {}:{}".format(

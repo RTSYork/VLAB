@@ -59,15 +59,15 @@ except ValueError:
 	sys.exit(1)
 
 # Do the specified user and boardclass exist in redis?
-check_in_set(db, 'vlab:boardclasses', boardclass, "Board class {} does not exist.".format(boardclass))
-check_in_set(db, 'vlab:users', username, "User {} is not a VLAB user.".format(username))
+check_in_set(db, 'vlab:boardclasses', boardclass, "Board class '{}' does not exist.".format(boardclass))
+check_in_set(db, 'vlab:users', username, "User '{}' is not a VLAB user.".format(username))
 
 # Can the user access the requested boardclass?
 # Either they are an overlord user, or vlab:user:<username>:allowedboards includes the boardclass in question
 if not db.get("vlab:user:{}:overlord".format(username)):
 	check_in_set(db, "vlab:user:{}:allowedboards".format(username),
 	             boardclass,
-	             "User {} cannot access board class {}.".format(username, boardclass)
+	             "User '{}' cannot access board class '{}'.".format(username, boardclass)
 	             )
 
 # Do we already own it?
@@ -108,19 +108,20 @@ log.info("LOCK: {}, {}, {} remaining in set".format(username, boardclass, unlock
 board_details = get_board_details(db, board, ["user", "server", "port"])
 
 lock_start = time.strftime("%H:%M:%S %Z", time.localtime(locktime))
-lock_end = time.strftime("%d/%m/%y AT %H:%M:%S %Z", time.localtime(locktime + MAX_LOCK_TIME))
+lock_end = time.strftime("%d/%m/%y at %H:%M:%S %Z", time.localtime(locktime + MAX_LOCK_TIME))
+lock_end_caps = time.strftime("%d/%m/%y AT %H:%M:%S %Z", time.localtime(locktime + MAX_LOCK_TIME))
 print("Locked board '{}' of type '{}' for user '{}' at {} for {} seconds"
       .format(board, boardclass, username, lock_start, MAX_LOCK_TIME))
-print("********************************************************************************************")
-print("*              YOUR EXCLUSIVE BOARD LOCK EXPIRES ON {}               *".format(lock_end))
-print("* AFTER THIS TIME SOMEBODY ELSE MIGHT BE ALLOCATED YOUR BOARD AND YOU WILL BE DISCONNECTED *")
-print("********************************************************************************************")
+print("*******************************************************************************************")
+print("*              YOUR EXCLUSIVE BOARD LOCK EXPIRES ON {}              *".format(lock_end_caps))
+print("* AFTER THIS TIME SOMEONE ELSE MIGHT BE ALLOCATED YOUR BOARD AND YOU WILL BE DISCONNECTED *")
+print("*******************************************************************************************")
 
 # All done. First restart the target container
 target = "vlab@{}".format(board_details['server'])
 keyfile = "{}{}".format(KEYS_DIR, "id_rsa")
-cmd = "/opt/VLAB/boardrestart.py {}".format(board)
-ssh_cmd = "ssh -o \"StrictHostKeyChecking no\" -e none -i {} {} \"{}\"".format(keyfile, target, cmd)
+cmd = "/opt/VLAB/boardrestart.sh {}".format(board)
+ssh_cmd = "ssh -q -o \"StrictHostKeyChecking no\" -e none -i {} {} \"{}\"".format(keyfile, target, cmd)
 print("Restarting target container...")
 os.system(ssh_cmd)
 
@@ -138,19 +139,20 @@ screenrc = "defhstatus \\\"{} (VLAB Shell)\\\"\\ncaption always\\ncaption string
 	.format(boardclass, username, lock_end, boardclass, board, board_details['server'])
 cmd = "echo -e '{}' > /vlab/vlabscreenrc; screen -c /vlab/vlabscreenrc -qdRR - /dev/ttyFPGA 115200; killall -q screen"\
 	.format(screenrc)
-ssh_cmd = "ssh -4 {} -o \"StrictHostKeyChecking no\" -e none -i {} -p {} -tt {} \"{}\""\
+ssh_cmd = "ssh -q -4 {} -o \"StrictHostKeyChecking no\" -e none -i {} -p {} -tt {} \"{}\""\
 	.format(tunnel, keyfile, board_details['port'], target, cmd)
 rv = os.system(ssh_cmd)
 
-print("User disconnected. Resetting board")
+print("User disconnected. Cleaning up...")
 log.info("RELEASE: {}, {}".format(username, boardclass))
 
 if db.get("vlab:knownboard:{}:reset".format(board)) == "true":
 	cmd = "/opt/xsct/bin/xsdb /vlab/reset.tcl"
-	ssh_cmd = "ssh -o \"StrictHostKeyChecking no\" -i {} -p {} {} \"{}\"".format(keyfile, board_details['port'], target,
-	                                                                             cmd)
-	print("Resetting board.")
+	ssh_cmd = "ssh -q -o \"StrictHostKeyChecking no\" -i {} -p {} {} \"{}\""\
+		.format(keyfile, board_details['port'], target, cmd)
+	print("Resetting board...")
 	os.system(ssh_cmd)
 
-print("Releasing lock.")
+print("Releasing lock...")
 unlock_board_if_user_time(db, board, boardclass, username, locktime)
+print("Disconnected successfully.")

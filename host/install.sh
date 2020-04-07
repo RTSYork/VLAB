@@ -14,6 +14,9 @@ for f in *; do
 	fi
 done
 
+echo "Setting permissions of log directory..."
+chown vlab:vlab /opt/VLAB/log
+
 echo "Reloading udev rules..."
 udevadm control --reload
 
@@ -33,7 +36,8 @@ You can test by connecting a supported FPGA and checking that the boardserver
 container is created. Plug in the device and run:
     docker ps
 
-Errors will be logged to:
-    /opt/VLAB/log/attachdetach.log and
+Errors and status will be logged to:
+    /opt/VLAB/log/attachdetach.log
     /opt/VLAB/log/boardscan.log
+    /opt/VLAB/log/boardreset.log
 "
