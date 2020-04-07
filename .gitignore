@@ -121,10 +121,12 @@ Temporary Items
 /boardattach.py
 /boarddetach.sh
 /boarddetach.py
+/boardrestart.sh
 /boardrestart.py
 /boardevent.sh
 /boardscan.sh
 /boardhost.conf
+/boardserver-load.sh
 /boardserver.tar
 /*.conf.backup*
 /xsct
