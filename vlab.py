@@ -26,7 +26,7 @@ from subprocess import Popen, PIPE
 ############################
 # Update version string here and in 'current_version' file when updating this script
 # Version number must be in 'x.y.z' format
-current_version = '1.1.0'
+current_version = '1.1.1'
 current_branch = 'master'
 ############################
 
@@ -48,9 +48,8 @@ parser.add_argument('-u', '--user', nargs=1, default=[getpass.getuser()], help="
 parser.add_argument('-b', '--board', nargs=1, default=["vlab_zybo-z7"], help="Requested board class.")
 parsed = parser.parse_args()
 
-error_info = "If you are having difficulty connecting, ensure that you are able to ssh to the server {}.\n" \
-             "Read the instructions at\n" \
-             "\thttps://wiki.york.ac.uk/display/RTS/Using+the+Xilinx+Tools+Remotely".format(parsed.relay[0])
+error_info = "Read the instructions at\n" \
+             "\thttps://wiki.york.ac.uk/display/RTS/Using+the+Xilinx+Tools+Remotely"
 
 # Check for an update from GitHub repository
 update_url = 'https://raw.githubusercontent.com/RTSYork/VLAB/{}/client_version'.format(current_branch)
@@ -81,8 +80,44 @@ if not os.path.isfile(parsed.key[0]):
 	err("Keyfile {} does not exist. Specify a keyfile with --key.".format(parsed.key[0]))
 
 # First get a port to use on the relay server
-ssh_cmd = ['ssh', '-i', parsed.key[0], '-p', parsed.port[0], '{}@{}'.format(parsed.user[0], parsed.relay[0]), 'getport']
-stdout, stderr = Popen(ssh_cmd, stdout=PIPE).communicate()
+ssh_cmd = ['ssh', '-oPasswordAuthentication=no', '-i', parsed.key[0], '-p', parsed.port[0], '{}@{}'.format(parsed.user[0], parsed.relay[0]), 'getport']
+stdout, stderr = Popen(ssh_cmd, stdout=PIPE, stderr=PIPE).communicate()
+
+try:
+	error = stderr.decode('ascii').strip()
+except UnicodeError:
+	reply = None
+	err("Could not decode error output from ssh subprocess")
+
+if len(stdout) == 0 and len(error) > 0:
+	errstr = ""
+	if error.find("UNPROTECTED PRIVATE KEY FILE") != -1:
+		errstr += "The permissions on the key {} are too permissive.\n".format(parsed.key[0])
+		errstr += "Only your user should be able to access the key, or it will be rejected by ssh.\n"
+		errstr += "To fix this, run the command\n\tchmod 0600 {}\n".format(parsed.key[0])
+	elif error.find("Operation timed out") != -1 or error.find("Connection refused") != -1:
+		errstr += "Cannot see the VLAB relay server: {}\n".format(parsed.relay[0])
+		errstr += "Try the following:\n\tssh {}\n".format(parsed.relay[0])
+		errstr += "You should get a password prompt:\n\t> <yourusername>@{}'s password\n".format(parsed.relay[0])
+		errstr += "If this doesn't connect, or the prompt is for any other server, set up your .ssh/config file\n"
+	elif error.find("Permission denied") != -1:
+		errstr += error
+		errstr += "\nEnsure that you have copied your private key:\n"
+		errstr += "\tssh-copy-id csteach1.york.ac.uk\n\t(or csresearch1.york.ac.uk for staff)\n"
+		errstr += "Also, if your VLAB username is different to your normal username, set it with -u:\n"
+		errstr += "\t./vlab.py -k {} -u myusername\n".format(parsed.key[0])
+	elif error.find("Resource temporarily unavailable") != -1:
+		errstr += error
+		errstr += "\nThis often means a firewall has blocked the connection. Try temporarily disabling your firewall application.\n"
+	elif error.find("REMOTE HOST IDENTIFICATION HAS CHANGED") != -1:
+		errstr += error
+		errstr += "\n\n\nThe host key in the VLAB has changed. This should not happen and might indicate a man-in-the-middle attack.\n"
+		errstr += "If you are sure this is not the case, delete the line mentioned above from the file ~/.ssh/known_hosts\n"
+	else:
+		print(error)
+	errstr += error_info
+	err(errstr)
+
 try:
 	reply = stdout.decode('ascii').strip()
 except UnicodeError:
