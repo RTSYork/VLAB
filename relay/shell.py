@@ -106,10 +106,9 @@ log.info("LOCK: {}, {}, {} remaining in set".format(username, boardclass, unlock
 board_details = get_board_details(db, board, ["user", "server", "port"])
 
 lock_start = time.strftime("%H:%M:%S %Z", time.localtime(locktime))
-lock_end = time.strftime("%d/%m/%y at %H:%M:%S %Z", time.localtime(locktime + MAX_LOCK_TIME))
-print(
-	"Locked board type '{}' for user '{}' at {} for {} seconds".format(boardclass, username, lock_start, MAX_LOCK_TIME))
-print("BOARD LOCK EXPIRES: {}".format(lock_end))
+lock_end = time.strftime("%d/%m/%y AT %H:%M:%S %Z", time.localtime(locktime + MAX_LOCK_TIME))
+print("Locked board '{}' of type '{}' for user '{}' at {} for {} seconds"
+      .format(board, boardclass, username, lock_start, MAX_LOCK_TIME))
 
 # All done. First restart the target container
 target = "vlab@{}".format(board_details['server'])
@@ -119,11 +118,14 @@ ssh_cmd = "ssh -o \"StrictHostKeyChecking no\" -e none -i {} {} \"{}\"".format(k
 print("Restarting target container...")
 os.system(ssh_cmd)
 
-print("Restarted.")
+print("********************************************************************************************")
+print("*              YOUR EXCLUSIVE BOARD LOCK EXPIRES ON {}               *".format(lock_end))
+print("* AFTER THIS TIME SOMEBODY ELSE MIGHT BE ALLOCATED YOUR BOARD AND YOU WILL BE DISCONNECTED *")
+print("********************************************************************************************")
+time.sleep(2)
 
 # Execute the bounce command
-print("SSH to board server...")
-time.sleep(1)
+print("Connecting to board server...")
 
 # Port details might have changed
 board_details = get_board_details(db, board, ["user", "server", "port"])
