@@ -26,6 +26,15 @@ serial = sys.argv[1]
 
 log.info("Board serial {} detached. Deregistering...".format(serial))
 
+log.info("Killing the board server Docker container...")
+container_name = "cnt-{}".format(serial)
+try:
+	subprocess.check_output(['docker', 'kill', container_name])
+	log.info("Docker container killed.")
+except subprocess.CalledProcessError as e:
+	log.info("Error killing Docker container.")
+	pass
+
 redis_server = "localhost"
 redis_port = 6379
 
@@ -71,11 +80,5 @@ db.delete("vlab:board:{}:server".format(serial))
 db.delete("vlab:board:{}:port".format(serial))
 db.delete("vlab:board:{}:lock:username".format(serial))
 db.delete("vlab:board:{}:lock:time".format(serial))
-
-container_name = "cnt-{}".format(serial)
-try:
-	s = subprocess.check_output(['docker', 'kill', container_name])
-except subprocess.CalledProcessError:
-	pass
 
 log.info("Board serial {} detached and deregistered.".format(serial))
