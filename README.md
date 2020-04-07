@@ -145,20 +145,7 @@ sudo apt install fxload libusb-dev python3-redis task-spooler
 
 As described previously, board hosts are the servers to which the actual FPGA boards are connected. There can be multiple board hosts, and can be the same machine that the relay server is running. udev rules recognise when FPGAs are attached and instances of the `boardserver` container are launched to serve it. 
 
-To set up a board host, first send the boardserver Docker image from where you built it to the new board host:
-
-```
-docker save -o boardserver.tar vlab/boardserver
-scp boardserver.tar newboardhost:
-```
-
-then load the image into Docker on the board host:
-
-```
-docker load -i boardserver.tar
-```
-
-You must also create a `vlab` user on the board host which has access to the `docker` group.
+To set up a board host, first create a `vlab` user on the which has access to the `docker` group.
 For example, on the new board host:
 
 ```
@@ -212,7 +199,24 @@ cd host
 sudo ./install.sh /tools/Xilinx/SDK/2019.1
 ```
 
-Finally, edit the `/opt/VLAB/boardhost.conf` to set the hostname/IP and port of the relay server.
+Once installed, edit `/opt/VLAB/boardhost.conf` to set the hostname/IP and port of the relay server.
+
+Finally, send the board server Docker image from where you built it to the new board host using the helper script.
+From the machine where the Docker image was built, run the following (where `newboardhost` is the hostname or IP of the new board host):
+
+```
+./boardserver-update.sh newboardhost
+```
+
+This script can also be used to update the board servers when the image is changed/updated, and can take multiple board hosts (including `localhost`) as arguments.
+
+Alternatively this step can be performed manually by saving, transferring and loading the Docker image, as follows:
+
+```
+docker save -o boardserver.tar vlab/boardserver
+scp boardserver.tar newboardhost:
+ssh newboardhost docker load -i boardserver.tar
+```
 
 #### Supporting FPGA Boards on the Board Hosts
 
