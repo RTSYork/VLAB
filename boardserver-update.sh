@@ -15,7 +15,7 @@ for host in "$@"
 do
 	if [[ $host == "localhost" ]]; then
 		echo Reloading boardserver image on local machine...
-		/opt/VLAB/boardserver_load.sh
+		/opt/VLAB/boardserver-load.sh
 	else
 		echo Copying boardserver image to $host...
 		scp boardserver.tar $host:
