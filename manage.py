@@ -150,7 +150,6 @@ def main():
 		result_text = result.stdout.decode('utf-8')
 		output = parse_checkboards_output(result_text)
 		print(output)
-		print("**********************************************")
 
 	elif args.mode == "stats":
 		os.system("docker exec vlab_relay_1 python3 /vlab/logparse.py")
@@ -185,7 +184,7 @@ def parse_checkboards_output(text):
 
 	for boardclass in sorted(boards_list.keys()):
 		boards = boards_list[boardclass]
-		result += "\n{} - {} boards\n".format(boardclass, len(boards))
+		result += "\n{} - {} boards\n\n".format(boardclass, len(boards))
 		for board in boards:
 			serial = board[0]
 			server = board[1]
@@ -210,7 +209,8 @@ def parse_checkboards_output(text):
 				status = "Locked by {} ({} to {})".format(user, lock_time, expiry_time)
 			elif len(lock_info3) > 0:
 				status = "Available but no lock info - setting available"
-			result += "\t{}\t{}\t{}\n".format(server, serial, status)
+			result += "{}\t{}\t{}\n".format(server, serial, status)
+		result += "\n**********************************************\n"
 	return result
 
 
