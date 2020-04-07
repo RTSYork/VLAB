@@ -46,10 +46,13 @@ If the VLAB relay server or port are not the defaults defined in the script they
 ./vlab.py -r a_servername -p 2223 -u vlabuser -k keyfile -b requested_board_class
 ```
 
-These commands will request a free board of the board class `requested_board_class` and, if one is free, connect to it. Local port `12345` will be connected to the remote hardware server for that board, so the Xilinx tools can be pointed at `localhost:12345` to program and debug the FPGA, whilst the terminal will show the serial UART input and output.
+These commands will request a free board of the board class `requested_board_class` and, if one is free, connect to it.
+Local port `12345` will be connected to the remote hardware server for that board, so the Xilinx tools can be pointed at `tcp:localhost:12345` to program and debug the FPGA, whilst the terminal will show the serial UART input and output.
 
 The terminal uses [GNU screen](https://www.gnu.org/software/screen/) so to disconnect press and release Ctrl-A, then press Ctrl-K.
 
+By default, the relay server will allocate boards using a *least-recently-unlocked* scheme to balance load, i.e. whichever board has the oldest unlock time will be preferred.
+Boards that have been attached to the system but never allocated to a user will be used preferentially over those that have previously been used. 
 
 
 ## Installation

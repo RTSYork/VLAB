@@ -60,7 +60,8 @@ def check_locks(db):
 				bd = get_board_details(db, b, ["server", "port"])
 				log("\t\tServer: {}:{}".format(bd['server'], bd['port']), True)
 
-				if not db.sismember("vlab:boardclass:{}:unlockedboards".format(bc), b):
+				board_unlocked_since = db.zscore("vlab:boardclass:{}:unlockedboards".format(bc), b)
+				if board_unlocked_since is None:
 					locker = db.get("vlab:board:{}:lock:username".format(b))
 					lock_time = db.get("vlab:board:{}:lock:time".format(b))
 
@@ -87,7 +88,7 @@ def check_locks(db):
 							log("Board {} lock timed out. Forced release.".format(b), False)
 							unlock_board(db, b, bc)
 				else:
-					log("\t\tAvailable", True)
+					log("\t\tAvailable since {}".format(int(board_unlocked_since)), True)
 		else:
 			log("\tCurrently being locked by a user.", True)
 
@@ -109,7 +110,7 @@ def check_ssh_to_boards(db):
 					log("Board {} on {}:{} failed SSH connection. Removing from database."
 					    .format(board, server, port), False)
 					db.srem("vlab:boardclass:{}:boards".format(bc), board)
-					db.srem("vlab:boardclass:{}:unlockedboards".format(bc), board)
+					db.zrem("vlab:boardclass:{}:unlockedboards".format(bc), board)
 				else:
 					log("Board {} on {}:{} connection OK.".format(board, server, port), True)
 			else:

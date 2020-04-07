@@ -17,7 +17,6 @@ import os
 import socket
 import subprocess
 import sys
-import time
 import redis
 
 CONFIG_FILE = '/opt/VLAB/boardhost.conf'
@@ -134,7 +133,7 @@ subprocess.check_output(['docker', 'exec', container_name, '/bin/sh', '-c', cmd]
 # Set up our boardclass
 db.sadd("vlab:boardclasses", boardclass)
 db.sadd("vlab:boardclass:{}:boards".format(boardclass), serial)
-db.sadd("vlab:boardclass:{}:unlockedboards".format(boardclass), serial)
+db.zadd("vlab:boardclass:{}:unlockedboards".format(boardclass), 0, serial)
 
 # Set up our board with details provided. Remove any locks.
 db.set("vlab:board:{}:user".format(serial), "root")

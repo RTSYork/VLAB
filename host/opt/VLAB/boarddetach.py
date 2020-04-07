@@ -74,7 +74,7 @@ boardtype = db.get("vlab:knownboard:{}:type".format(serial))
 boardclass = db.get("vlab:knownboard:{}:class".format(serial))
 
 db.srem("vlab:boardclass:{}:boards".format(boardclass), serial)
-db.srem("vlab:boardclass:{}:unlockedboards".format(boardclass), serial)
+db.zrem("vlab:boardclass:{}:unlockedboards".format(boardclass), serial)
 db.delete("vlab:board:{}:user".format(serial))
 db.delete("vlab:board:{}:server".format(serial))
 db.delete("vlab:board:{}:port".format(serial))

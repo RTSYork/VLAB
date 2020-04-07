@@ -185,24 +185,32 @@ def parse_checkboards_output(text):
 
 	for boardclass in sorted(boards_list.keys()):
 		boards = boards_list[boardclass]
-		result += "{} - {} boards\n".format(boardclass, len(boards))
+		result += "\n{} - {} boards\n".format(boardclass, len(boards))
 		for board in boards:
-			server = board[1]
 			serial = board[0]
+			server = board[1]
 			status = board[2]
-			pattern1 = re.compile("Locked by (.*) at (\\d*) until (\\d*)\\.")
+			pattern1 = re.compile("Available since (\\d*)")
 			lock_info1 = pattern1.findall(status)
-			pattern2 = re.compile("Board .* available but no lock info\\. Setting available\\.")
+			pattern2 = re.compile("Locked by (.*) at (\\d*) until (\\d*)\\.")
 			lock_info2 = pattern2.findall(status)
+			pattern3 = re.compile("Board .* available but no lock info\\. Setting available\\.")
+			lock_info3 = pattern3.findall(status)
 			if len(lock_info1) > 0:
-				user = lock_info1[0][0]
-				lock_time = parse_timestamp(lock_info1[0][1])
-				expiry_time = parse_timestamp(lock_info1[0][2])
-				status = "Locked by {} ({} to {})".format(user, lock_time, expiry_time)
+				unlocked_time = lock_info1[0]
+				if unlocked_time == "0":
+					since = "first connected"
+				else:
+					since = parse_timestamp(unlocked_time)
+				status = "Available since {}".format(since)
 			elif len(lock_info2) > 0:
+				user = lock_info2[0][0]
+				lock_time = parse_timestamp(lock_info2[0][1])
+				expiry_time = parse_timestamp(lock_info2[0][2])
+				status = "Locked by {} ({} to {})".format(user, lock_time, expiry_time)
+			elif len(lock_info3) > 0:
 				status = "Available but no lock info - setting available"
 			result += "\t{}\t{}\t{}\n".format(server, serial, status)
-		result += "\n"
 	return result
 
 

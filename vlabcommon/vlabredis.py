@@ -7,6 +7,7 @@ Ian Gray, 2016
 """
 
 import sys
+import time
 import redis
 
 
@@ -60,10 +61,11 @@ def unlock_board(db, board, boardclass):
 	"""
 	Unlock the board 'board' of a given 'boardclass'.
 	"""
+	unlock_time = int(time.time())
 	db.delete("vlab:board:{}:lock:username".format(board))
 	db.delete("vlab:board:{}:lock:time".format(board))
 	db.delete("vlab:boardclass:{}:locking".format(boardclass))
-	db.sadd("vlab:boardclass:{}:unlockedboards".format(boardclass), board)
+	db.zadd("vlab:boardclass:{}:unlockedboards".format(boardclass), unlock_time, board)
 
 
 def unlock_board_if_user(db, board, boardclass, user):
@@ -74,11 +76,11 @@ def unlock_board_if_user(db, board, boardclass, user):
 		unlock_board(db, board, boardclass)
 
 
-def unlock_board_if_user_time(db, board, boardclass, user, time):
+def unlock_board_if_user_time(db, board, boardclass, user, lock_time):
 	"""
 	Unlock the board 'board' of a given 'boardclass', if locked by 'user' at 'time'.
 	"""
-	if db.get("vlab:board:{}:lock:time".format(board)) == str(time):
+	if db.get("vlab:board:{}:lock:time".format(board)) == str(lock_time):
 		unlock_board_if_user(db, board, boardclass, user)
 
 
@@ -115,5 +117,34 @@ def unlock_boards_held_by(db, user):
 def remove_board(db, b):
 	bc = get_boardclass_of_board(db, b)
 	db.srem("vlab:boardclass:{}:boards".format(bc), b)
-	db.srem("vlab:boardclass:{}:unlockedboards".format(bc), b)
+	db.zrem("vlab:boardclass:{}:unlockedboards".format(bc), b)
 	db.delete("vlab:board:{}:")
+
+
+def _zpopmin(db, zset):
+	# Based on https://redis.io/topics/transactions and https://github.com/andymccurdy/redis-py#pipelines
+	with db.pipeline() as pipe:
+		while True:
+			try:
+				pipe.watch(zset)
+				elements = pipe.zrange(zset, 0, 0)
+				if len(elements) > 0:
+					element = elements[0]
+				else:
+					element = None
+				pipe.multi()
+				pipe.zrem(zset, element)
+				pipe.execute()
+				break
+			except redis.WatchError:
+				continue
+	return element
+
+
+def allocate_board_of_class(db, boardclass):
+	"""
+	Allocate a board of a given boardclass by popping the least-recently-unlocked board from the unlockedboards set
+	"""
+	# Ideally we'd use ZPOPMIN here, but it's only available in Redis 5.0+
+	# return db.zpopmin("vlab:boardclass:{}:unlockedboards".format(boardclass))
+	return _zpopmin(db, "vlab:boardclass:{}:unlockedboards".format(boardclass))

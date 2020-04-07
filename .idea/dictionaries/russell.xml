@@ -10,6 +10,7 @@
       <w>boardtype</w>
       <w>checkboards</w>
       <w>deregistered</w>
+      <w>deregistering</w>
       <w>digilent</w>
       <w>embs</w>
       <w>fpga</w>
@@ -21,6 +22,7 @@
       <w>keypairs</w>
       <w>knownboard</w>
       <w>knownboards</w>
+      <w>lastunlocked</w>
       <w>locktime</w>
       <w>logparse</w>
       <w>nofreeboards</w>
@@ -37,6 +39,8 @@
       <w>xilinx</w>
       <w>xsct</w>
       <w>xsdb</w>
+      <w>zpopmin</w>
+      <w>zset</w>
       <w>zybo</w>
     </words>
   </dictionary>

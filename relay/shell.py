@@ -85,7 +85,9 @@ if board is None:
 	db.set("vlab:boardclass:{}:locking".format(boardclass), 1)
 	db.expire("vlab:boardclass:{}:locking".format(boardclass), 2)
 
-	board = db.spop("vlab:boardclass:{}:unlockedboards".format(boardclass))
+	print("Requesting least-recently-unlocked board of class '{}'...".format(boardclass))
+	board = allocate_board_of_class(db, boardclass)
+
 	if board is None:
 		db.delete("vlab:boardclass:{}:locking".format(boardclass))
 		print("All boards of type '{}' are currently locked by other VLAB users.".format(boardclass))
@@ -99,7 +101,7 @@ else:
 	# Refresh the lock time
 	db.set("vlab:board:{}:lock:time".format(board), locktime)
 
-unlocked_count = db.scard("vlab:boardclass:{}:unlockedboards".format(boardclass))
+unlocked_count = db.zcard("vlab:boardclass:{}:unlockedboards".format(boardclass))
 log.info("LOCK: {}, {}, {} remaining in set".format(username, boardclass, unlocked_count))
 
 # Fetch the details of the locked board
