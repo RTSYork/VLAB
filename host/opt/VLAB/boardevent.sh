@@ -6,6 +6,11 @@ if [ $# -eq 0 ]; then
 	echo "No board event type supplied. Options are: 'attach', 'detach'." >> $LOGFILE
 else
 	if [ "$1" = "attach" ]; then
+		# Run the Digilent driver detach utility, if this script is provided with the correct parameters
+		if [ $# -eq 4 ]; then
+			echo "Board attached. Running 'dftdrvdtch $3 $4'..." >> $LOGFILE
+			/usr/sbin/dftdrvdtch $3 $4 >> $LOGFILE 2>&1
+		fi
 		# Add a small delay here so any detach events that are fired simultaneously are queued first
 		sleep 1
 		tsp -n sh -c "/opt/VLAB/boardattach.sh $2 >> $LOGFILE 2>&1"

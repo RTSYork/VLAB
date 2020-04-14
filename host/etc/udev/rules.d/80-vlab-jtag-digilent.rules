@@ -2,7 +2,7 @@
 ATTR{idVendor}=="0403", ATTR{manufacturer}=="Digilent", SYMLINK+="vlab/%s{serial}/jtag", MODE="0666"
 
 # Start board server - this will only succeed once as it requires both JTAG and TTY symlinks to be present first
-ACTION=="add", ATTR{idVendor}=="0403", ATTR{manufacturer}=="Digilent", RUN+="/bin/sh -c 'echo /opt/VLAB/boardevent.sh attach %s{serial} | at now'"
+ACTION=="add", ATTR{idVendor}=="0403", ATTR{manufacturer}=="Digilent", RUN+="/bin/sh -c 'echo /opt/VLAB/boardevent.sh attach %s{serial} %s{busnum} %s{devnum} | at now'"
 
 # Fire when Digilent USB device is removed (note ENV rather than ATTR)
 ACTION=="remove", ENV{ID_VENDOR_ID}=="0403", ENV{ID_VENDOR}=="Digilent", SUBSYSTEM=="tty", RUN+="/bin/sh -c 'echo /opt/VLAB/boardevent.sh detach $env{ID_SERIAL_SHORT} | at now'"
