@@ -14,8 +14,31 @@ if [[ -d "$DIR" ]]; then
 		serial=`basename $f`
 		running=`docker inspect -f {{.State.Running}} cnt-$serial`
 
-		if [ "$running" != "true" ] ; then
+		# Check for and remove broken symlinks
+		if [[ -L "$f/tty" ]] && [[ ! -a "$f/tty" ]]; then
+			rm $f/tty
+		fi
+		if [[ -L "$f/jtag" ]] && [[ ! -a "$f/jtag" ]]; then
+			rm $f/jtag
+		fi
+
+		if [[ "$running" != "true" && -e "$f/tty" && -e "$f/jtag" ]]; then
 			/opt/VLAB/boardevent.sh attach $serial
 		fi
 	done
+fi
+
+
+# Iterate through Docker containers and detach any that do not have associated devices active.
+
+containers=`docker ps -q -f name="cnt-"`
+if [[ ! -z $containers ]]; then
+	while read -r container; do
+		name=`docker inspect -f {{.Name}} $container`
+		serial=${name:5}
+		if [[ ! -e "$DIR/$serial/tty" || ! -e "$DIR/$serial/jtag" ]]; then
+			echo Docker container for $serial is running but device is not present. Killing container...
+			/opt/VLAB/boardevent.sh detach $serial
+		fi
+	done <<< $containers
 fi
