@@ -16,7 +16,6 @@ Ian Gray, 2017
 """
 
 import argparse
-import getpass
 import os
 import sys
 import urllib.request
@@ -26,7 +25,7 @@ from subprocess import Popen, PIPE
 ############################
 # Update version string here and in 'current_version' file when updating this script
 # Version number must be in 'x.y.z' format
-current_version = '1.1.1'
+current_version = '1.1.2'
 current_branch = 'master'
 ############################
 
@@ -43,16 +42,23 @@ parser.add_argument('-p', '--port', nargs=1, default=["2222"], help="The ssh por
 parser.add_argument('-l', '--localport', nargs=1, default=["12345"], help="Local port to forward connections to.")
 
 parser.add_argument('-k', '--key', nargs=1, help="VLAB keyfile to use for authentication.")
-parser.add_argument('-u', '--user', nargs=1, default=[getpass.getuser()], help="VLAB username.")
+parser.add_argument('-u', '--user', nargs=1, help="VLAB username.")
 
 parser.add_argument('-b', '--board', nargs=1, default=["vlab_zybo-z7"], help="Requested board class.")
+
+parser.add_argument('-v', '--verbose', default=False, help="Enable verbose logging.", action='store_true')
 parsed = parser.parse_args()
 
 error_info = "Read the instructions at\n" \
              "\thttps://wiki.york.ac.uk/display/RTS/Using+the+Xilinx+Tools+Remotely"
 
+
 # Check for an update from GitHub repository
 update_url = 'https://raw.githubusercontent.com/RTSYork/VLAB/{}/client_version'.format(current_branch)
+
+if parsed.verbose:
+	print("Checking for update at URL: {}".format(update_url))
+
 req = urllib.request.Request(update_url)
 try:
 	response = urllib.request.urlopen(req)
@@ -80,7 +86,12 @@ if not os.path.isfile(parsed.key[0]):
 	err("Keyfile {} does not exist. Specify a keyfile with --key.".format(parsed.key[0]))
 
 # First get a port to use on the relay server
-ssh_cmd = ['ssh', '-oPasswordAuthentication=no', '-i', parsed.key[0], '-p', parsed.port[0], '{}@{}'.format(parsed.user[0], parsed.relay[0]), 'getport']
+if parsed.user != None:
+	ssh_cmd = ['ssh', '-oPasswordAuthentication=no', '-i', parsed.key[0], '-p', parsed.port[0], '-l', parsed.user[0], parsed.relay[0], 'getport']
+else:
+	ssh_cmd = ['ssh', '-oPasswordAuthentication=no', '-i', parsed.key[0], '-p', parsed.port[0], parsed.relay[0], 'getport']
+if parsed.verbose:
+	print("First ssh command: {}".format(ssh_cmd))
 stdout, stderr = Popen(ssh_cmd, stdout=PIPE, stderr=PIPE).communicate()
 
 try:
@@ -109,6 +120,9 @@ if len(stdout) == 0 and len(error) > 0:
 	elif error.find("Resource temporarily unavailable") != -1:
 		errstr += error
 		errstr += "\nThis often means a firewall has blocked the connection. Try temporarily disabling your firewall application.\n"
+	elif error.find("Connection closed by") != -1:
+		errstr += error
+		errstr += "\nEnsure that you have set the correct usernames in your ssh config.\n"
 	elif error.find("REMOTE HOST IDENTIFICATION HAS CHANGED") != -1:
 		errstr += error
 		errstr += "\n\n\nThe host key in the VLAB has changed. This should not happen and might indicate a man-in-the-middle attack.\n"
@@ -138,13 +152,21 @@ else:
 print("Tunnelling to relay server '{}' using port {}...".format(parsed.relay[0], ephemeral_port))
 
 # Now create the actual connection
-ssh_cmd = "ssh -L 9001:localhost:9001 -L {}:localhost:{} -o \"StrictHostKeyChecking no\" -e none -i {} -p {} -tt {}@{} {}:{}".format(
+ssh_user = ""
+if parsed.user != None:
+	ssh_user = " -l {} ".format(parsed.user[0])
+
+ssh_cmd = "ssh -L 9001:localhost:9001 -L {}:localhost:{} -o \"StrictHostKeyChecking no\" -e none -i {} {} -p {} -tt {} {}:{}".format(
 	parsed.localport[0],
 	ephemeral_port,
 	parsed.key[0],
+	ssh_user,
 	parsed.port[0],
-	parsed.user[0],
 	parsed.relay[0],
 	parsed.board[0],
 	ephemeral_port)
+
+if parsed.verbose:
+	print("Second ssh command: {}".format(ssh_cmd))
+
 os.system(ssh_cmd)
