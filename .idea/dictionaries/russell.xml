@@ -6,9 +6,11 @@
       <w>boardclass</w>
       <w>boardclasses</w>
       <w>boardhost</w>
+      <w>boardrestart</w>
       <w>boardserver</w>
       <w>boardtype</w>
       <w>checkboards</w>
+      <w>defhstatus</w>
       <w>deregistered</w>
       <w>deregistering</w>
       <w>digilent</w>
@@ -20,6 +22,7 @@
       <w>keyfile</w>
       <w>keypair</w>
       <w>keypairs</w>
+      <w>killall</w>
       <w>knownboard</w>
       <w>knownboards</w>
       <w>lastunlocked</w>
@@ -32,10 +35,12 @@
       <w>udev</w>
       <w>unlockedboards</w>
       <w>useradd</w>
+      <w>vivado</w>
       <w>vlab</w>
       <w>vlabcommon</w>
       <w>vlabkey</w>
       <w>vlabport</w>
+      <w>vlabscreenrc</w>
       <w>xilinx</w>
       <w>xsct</w>
       <w>xsdb</w>

@@ -137,7 +137,10 @@ target = "root@{}".format(board_details['server'])
 screenrc = "defhstatus \\\"{} (VLAB Shell)\\\"\\ncaption always\\ncaption string \\\" VLAB Shell [ User: {} | Lock " \
            "expires: {} | Board class: {} | Board serial: {} | Server: {} ]\\\""\
 	.format(boardclass, username, lock_end, boardclass, board, board_details['server'])
-cmd = "echo -e '{}' > /vlab/vlabscreenrc; screen -c /vlab/vlabscreenrc -qdRR - /dev/ttyFPGA 115200; killall -q screen"\
+cmd = "echo -e '{}' > /vlab/vlabscreenrc;" \
+      "screen -c /vlab/vlabscreenrc -qdRR - /dev/ttyFPGA 115200;" \
+      "killall -q screen;" \
+      "echo If the script does not continue to exit on its own, disconnect Vivado/SDK or press Control-C..."\
 	.format(screenrc)
 ssh_cmd = "ssh -q -4 {} -o \"StrictHostKeyChecking no\" -e none -i {} -p {} -tt {} \"{}\""\
 	.format(tunnel, keyfile, board_details['port'], target, cmd)
