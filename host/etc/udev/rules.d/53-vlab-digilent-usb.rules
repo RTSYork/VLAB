@@ -1,5 +1,0 @@
-# Override Digilent's RUN action for their JTAG controllers.
-# This leaves the TTY node present, which shouldn't be used directly but is
-# used by the other VLAB udev rules to detect when a board is unplugged.
-# Disabled for now as the behaviour just seems to run after the first board disconnection/reset instead, if not here.
-#ACTION=="add", ATTR{idVendor}=="0403", ATTR{manufacturer}=="Digilent", RUN:=""
