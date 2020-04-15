@@ -37,7 +37,7 @@ if [[ ! -z $containers ]]; then
 		name=`docker inspect -f {{.Name}} $container`
 		serial=${name:5}
 		if [[ ! -e "$DIR/$serial/tty" || ! -e "$DIR/$serial/jtag" ]]; then
-			echo Docker container for $serial is running but device is not present. Killing container...
+			echo `date --rfc-3339=s` Docker container for $serial is running but device is not present. Killing container...
 			/opt/VLAB/boardevent.sh detach $serial
 		fi
 	done <<< $containers
