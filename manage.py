@@ -193,7 +193,7 @@ def parse_checkboards_output(text):
 			lock_info1 = pattern1.findall(status)
 			pattern2 = re.compile("Locked by (.*) at (\\d*) until (\\d*)\\.")
 			lock_info2 = pattern2.findall(status)
-			pattern3 = re.compile("Board .* available but no lock info\\. Setting available\\.")
+			pattern3 = re.compile("Board .* marked as locked but has no lock info\\. Setting available\\.")
 			lock_info3 = pattern3.findall(status)
 			if len(lock_info1) > 0:
 				unlocked_time = lock_info1[0]
@@ -208,7 +208,7 @@ def parse_checkboards_output(text):
 				expiry_time = parse_timestamp(lock_info2[0][2])
 				status = "Locked by {} ({} to {})".format(user, lock_time, expiry_time)
 			elif len(lock_info3) > 0:
-				status = "Available but no lock info - setting available"
+				status = "Locked but no lock info - now set as available"
 			result += "{}\t{}\t{}\n".format(server, serial, status)
 		result += "\n**********************************************\n"
 	return result

@@ -66,7 +66,7 @@ def check_locks(db):
 					lock_time = db.get("vlab:board:{}:lock:time".format(b))
 
 					if locker is None or lock_time is None:
-						log("Board {} available but no lock info. Setting available.".format(b), False)
+						log("Board {} marked as locked but has no lock info. Setting available.".format(b), False)
 
 						try:
 							if db.get("vlab:knownboard:{}:reset".format(b)) == "true":
