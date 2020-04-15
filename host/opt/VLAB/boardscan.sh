@@ -6,9 +6,6 @@ DIR=/dev/vlab
 # do not have their associated boardserver container running then create it.
 
 if [[ -d "$DIR" ]]; then
-	# Force the Digilent utilities to update and enumerate boards
-	dadutil enum >> /dev/null
-
 	for f in $DIR/*
 	do
 		serial=`basename $f`
