@@ -29,6 +29,9 @@ RUN chmod 600 /root/.ssh/authorized_keys
 # Prevent locales from being forwarded to the boardserver SSH session
 RUN sed -i 's/^AcceptEnv LANG LC_/#AcceptEnv LANG LC_/' /etc/ssh/sshd_config
 
+# Prevent spawning additional Bash sessions from within Screen
+RUN echo "trap exit INT; if [ ! -z \"\$STY\" ]; then echo ಠ_ಠ Nothing to see here...; sleep 1; exit; fi; trap - INT" >> /root/.bashrc
+
 # Scripts
 ADD supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 ADD *.py /vlab/
