@@ -140,7 +140,7 @@ screenrc = "defhstatus \\\"{} (VLAB Shell)\\\"\\ncaption always\\ncaption string
 cmd = "echo -e '{}' > /vlab/vlabscreenrc;" \
       "screen -c /vlab/vlabscreenrc -qdRR - /dev/ttyFPGA 115200;" \
       "killall -q screen;" \
-      "echo If the script does not continue to exit on its own, disconnect Vivado/SDK or press Control-C..."\
+      "pkill -SIGINT -nx sshd"\
 	.format(screenrc)
 ssh_cmd = "ssh -q -4 {} -o \"StrictHostKeyChecking no\" -e none -i {} -p {} -tt {} \"{}\""\
 	.format(tunnel, keyfile, board_details['port'], target, cmd)
