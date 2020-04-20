@@ -125,8 +125,13 @@ host_port = int(host_port.split(":")[1])
 # Set up a cron inside the container to re-register itself periodically
 cmd = 'echo \\* \\* \\* \\* \\* root /usr/bin/python3 /vlab/register.py {} {} {} {} > /etc/cron.d/vlab-cron'\
 	.format(serial, socket.gethostname(), host_port, redis_server)
-
 subprocess.check_output(['docker', 'exec', container_name, '/bin/sh', '-c', cmd])
+
+# If the board is marked as reset on connection, reset it now just to be sure that its configuration is clean
+if db.get("vlab:knownboard:{}:reset".format(serial)) == "true":
+	cmd = "/opt/xsct/bin/xsdb /vlab/reset.tcl"
+	log.info("Resetting FPGA configuration on board {}...".format(serial))
+	subprocess.check_output(['docker', 'exec', container_name, '/bin/sh', '-c', cmd])
 
 # Finally, we register our new board with the redis server ourselves as well
 
