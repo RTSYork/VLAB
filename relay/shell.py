@@ -131,19 +131,29 @@ time.sleep(2)
 
 # Port details might have changed
 board_details = get_board_details(db, board, ["user", "server", "port"])
+server = board_details['server']
+port = board_details['port']
 tunnel = "-L {}:localhost:3121".format(tunnel_port)
 keyfile = "{}{}".format(KEYS_DIR, "id_rsa")
-target = "root@{}".format(board_details['server'])
+target = "root@{}".format(server)
+
+if db.get("vlab:knownboard:{}:reset".format(board)) == "true":
+	cmd = "/opt/xsct/bin/xsdb /vlab/reset.tcl"
+	ssh_cmd = "ssh -q -o \"StrictHostKeyChecking no\" -i {} -p {} {} \"{}\""\
+		.format(keyfile, port, target, cmd)
+	print("Resetting board...")
+	os.system(ssh_cmd)
+
 screenrc = "defhstatus \\\"{} (VLAB Shell)\\\"\\ncaption always\\ncaption string \\\" VLAB Shell [ User: {} | Lock " \
            "expires: {} | Board class: {} | Board serial: {} | Server: {} ]\\\""\
-	.format(boardclass, username, lock_end, boardclass, board, board_details['server'])
+	.format(boardclass, username, lock_end, boardclass, board, server)
 cmd = "echo -e '{}' > /vlab/vlabscreenrc;" \
       "screen -c /vlab/vlabscreenrc -qdRR - /dev/ttyFPGA 115200;" \
       "killall -q screen;" \
       "pkill -SIGINT -nx sshd"\
 	.format(screenrc)
 ssh_cmd = "ssh -q -4 {} -o \"StrictHostKeyChecking no\" -e none -i {} -p {} -tt {} \"{}\""\
-	.format(tunnel, keyfile, board_details['port'], target, cmd)
+	.format(tunnel, keyfile, port, target, cmd)
 rv = os.system(ssh_cmd)
 
 print("User disconnected. Cleaning up...")
@@ -152,7 +162,7 @@ log.info("RELEASE: {}, {}".format(username, boardclass))
 if db.get("vlab:knownboard:{}:reset".format(board)) == "true":
 	cmd = "/opt/xsct/bin/xsdb /vlab/reset.tcl"
 	ssh_cmd = "ssh -q -o \"StrictHostKeyChecking no\" -i {} -p {} {} \"{}\""\
-		.format(keyfile, board_details['port'], target, cmd)
+		.format(keyfile, port, target, cmd)
 	print("Resetting board...")
 	os.system(ssh_cmd)
 
