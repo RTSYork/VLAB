@@ -102,7 +102,7 @@ else:
 	db.set("vlab:board:{}:lock:time".format(board), locktime)
 
 unlocked_count = db.zcard("vlab:boardclass:{}:unlockedboards".format(boardclass))
-log.info("LOCK: {}, {}, {} remaining in set".format(username, boardclass, unlocked_count))
+log.info("LOCK: {}, {}:{}, {} remaining in set".format(username, boardclass, board, unlocked_count))
 
 # Fetch the details of the locked board
 board_details = get_board_details(db, board, ["user", "server", "port"])
@@ -157,7 +157,7 @@ ssh_cmd = "ssh -q -4 {} -o \"StrictHostKeyChecking no\" -e none -i {} -p {} -tt 
 subprocess.run(ssh_cmd, shell=True)
 
 print("User disconnected. Cleaning up...")
-log.info("RELEASE: {}, {}".format(username, boardclass))
+log.info("RELEASE: {}, {}:{}".format(username, boardclass, board))
 
 if db.get("vlab:knownboard:{}:reset".format(board)) == "true":
 	cmd = "/opt/xsct/bin/xsdb /vlab/reset.tcl"
