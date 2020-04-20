@@ -25,7 +25,8 @@ boardclass = db.get("vlab:knownboard:{}:class".format(serial))
 
 db.sadd("vlab:boardclasses", boardclass)
 db.sadd("vlab:boardclass:{}:boards".format(boardclass), serial)
-# We do not add ourselves to "vlab:boardclass:{}:unlockedboards" to avoid accidentally unlocking ourselves
+# We do not add the board to "vlab:boardclass:{}:unlockedboards" to avoid accidentally unlocking it.
+# If this is a new registration, this will be picked up by 'checkboards.py' on the relay and it will be unlocked then.
 
 # Set up our board with details provided
 db.set("vlab:board:{}:user".format(serial), "vlab")
