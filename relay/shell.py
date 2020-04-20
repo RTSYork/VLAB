@@ -14,7 +14,7 @@ Ian Gray, 2016
 import getpass
 import logging
 import os
-import time
+import subprocess
 from vlabredis import *
 
 KEYS_DIR = "/vlab/keys/"
@@ -123,7 +123,7 @@ keyfile = "{}{}".format(KEYS_DIR, "id_rsa")
 cmd = "/opt/VLAB/boardrestart.sh {}".format(board)
 ssh_cmd = "ssh -q -o \"StrictHostKeyChecking no\" -e none -i {} {} \"{}\"".format(keyfile, target, cmd)
 print("Restarting target container...")
-os.system(ssh_cmd)
+subprocess.run(ssh_cmd, shell=True)
 
 # Execute the bounce command
 print("Connecting to board server...")
@@ -142,7 +142,7 @@ if db.get("vlab:knownboard:{}:reset".format(board)) == "true":
 	ssh_cmd = "ssh -q -o \"StrictHostKeyChecking no\" -i {} -p {} {} \"{}\""\
 		.format(keyfile, port, target, cmd)
 	print("Resetting board...")
-	os.system(ssh_cmd)
+	subprocess.run(ssh_cmd, shell=True)
 
 screenrc = "defhstatus \\\"{} (VLAB Shell)\\\"\\ncaption always\\ncaption string \\\" VLAB Shell [ User: {} | Lock " \
            "expires: {} | Board class: {} | Board serial: {} | Server: {} ]\\\""\
@@ -154,7 +154,7 @@ cmd = "echo -e '{}' > /vlab/vlabscreenrc;" \
 	.format(screenrc)
 ssh_cmd = "ssh -q -4 {} -o \"StrictHostKeyChecking no\" -e none -i {} -p {} -tt {} \"{}\""\
 	.format(tunnel, keyfile, port, target, cmd)
-rv = os.system(ssh_cmd)
+subprocess.run(ssh_cmd, shell=True)
 
 print("User disconnected. Cleaning up...")
 log.info("RELEASE: {}, {}".format(username, boardclass))
@@ -164,7 +164,7 @@ if db.get("vlab:knownboard:{}:reset".format(board)) == "true":
 	ssh_cmd = "ssh -q -o \"StrictHostKeyChecking no\" -i {} -p {} {} \"{}\""\
 		.format(keyfile, port, target, cmd)
 	print("Resetting board...")
-	os.system(ssh_cmd)
+	subprocess.run(ssh_cmd, shell=True)
 
 print("Releasing lock...")
 unlock_board_if_user_time(db, board, boardclass, username, locktime)
