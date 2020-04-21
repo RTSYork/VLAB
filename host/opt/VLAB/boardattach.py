@@ -138,13 +138,17 @@ if db.get("vlab:knownboard:{}:reset".format(serial)) == "true":
 # Set up our boardclass
 db.sadd("vlab:boardclasses", boardclass)
 db.sadd("vlab:boardclass:{}:boards".format(boardclass), serial)
+db.zadd("vlab:boardclass:{}:availableboards".format(boardclass), 0, serial)
 db.zadd("vlab:boardclass:{}:unlockedboards".format(boardclass), 0, serial)
 
-# Set up our board with details provided. Remove any locks.
+# Set up our board with details provided. Remove any locks and sessions.
 db.set("vlab:board:{}:user".format(serial), "root")
 db.set("vlab:board:{}:server".format(serial), socket.gethostname())
 db.set("vlab:board:{}:port".format(serial), host_port)
 db.delete("vlab:board:{}:lock:username".format(serial))
 db.delete("vlab:board:{}:lock:time".format(serial))
+db.delete("vlab:board:{}:session:username".format(serial))
+db.delete("vlab:board:{}:session:starttime".format(serial))
+db.delete("vlab:board:{}:session:pingtime".format(serial))
 
 log.info("Board serial {} connected and registered.".format(serial))

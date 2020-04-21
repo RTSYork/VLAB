@@ -57,6 +57,12 @@ def get_board_details(db, b, details):
 	return rv
 
 
+def lock_board(db, board, boardclass, username, lock_time):
+	db.zrem("vlab:boardclass:{}:unlockedboards".format(boardclass), board)
+	db.set("vlab:board:{}:lock:username".format(board), username)
+	db.set("vlab:board:{}:lock:time".format(board), lock_time)
+
+
 def unlock_board(db, board, boardclass):
 	"""
 	Unlock the board 'board' of a given 'boardclass'.
@@ -64,8 +70,8 @@ def unlock_board(db, board, boardclass):
 	unlock_time = int(time.time())
 	db.delete("vlab:board:{}:lock:username".format(board))
 	db.delete("vlab:board:{}:lock:time".format(board))
-	db.delete("vlab:boardclass:{}:locking".format(boardclass))
 	db.zadd("vlab:boardclass:{}:unlockedboards".format(boardclass), unlock_time, board)
+	return True
 
 
 def unlock_board_if_user(db, board, boardclass, user):
@@ -73,7 +79,9 @@ def unlock_board_if_user(db, board, boardclass, user):
 	Unlock the board 'board' of a given 'boardclass', if locked by 'user'.
 	"""
 	if db.get("vlab:board:{}:lock:username".format(board)) == user:
-		unlock_board(db, board, boardclass)
+		return unlock_board(db, board, boardclass)
+	else:
+		return False
 
 
 def unlock_board_if_user_time(db, board, boardclass, user, lock_time):
@@ -81,7 +89,9 @@ def unlock_board_if_user_time(db, board, boardclass, user, lock_time):
 	Unlock the board 'board' of a given 'boardclass', if locked by 'user' at 'time'.
 	"""
 	if db.get("vlab:board:{}:lock:time".format(board)) == str(lock_time):
-		unlock_board_if_user(db, board, boardclass, user)
+		return unlock_board_if_user(db, board, boardclass, user)
+	else:
+		return False
 
 
 def unlock_board_no_boardclass(db, board):
@@ -118,11 +128,20 @@ def remove_board(db, b):
 	bc = get_boardclass_of_board(db, b)
 	db.srem("vlab:boardclass:{}:boards".format(bc), b)
 	db.zrem("vlab:boardclass:{}:unlockedboards".format(bc), b)
-	db.delete("vlab:board:{}:")
+	db.zrem("vlab:boardclass:{}:availableboards".format(bc), b)
+	db.delete("vlab:board:{}:user".format(b))
+	db.delete("vlab:board:{}:server".format(b))
+	db.delete("vlab:board:{}:port".format(b))
+	db.delete("vlab:board:{}:lock:username".format(b))
+	db.delete("vlab:board:{}:lock:time".format(b))
+	db.delete("vlab:board:{}:session:username".format(b))
+	db.delete("vlab:board:{}:session:starttime".format(b))
+	db.delete("vlab:board:{}:session:pingtime".format(b))
 
 
 def _zpopmin(db, zset):
 	# Based on https://redis.io/topics/transactions and https://github.com/andymccurdy/redis-py#pipelines
+	# Ideally we'd use ZPOPMIN here, but it's only available in Redis 5.0+
 	with db.pipeline() as pipe:
 		while True:
 			try:
@@ -141,10 +160,87 @@ def _zpopmin(db, zset):
 	return element
 
 
-def allocate_board_of_class(db, boardclass):
+def allocate_unlocked_board_of_class(db, boardclass):
 	"""
 	Allocate a board of a given boardclass by popping the least-recently-unlocked board from the unlockedboards set
 	"""
-	# Ideally we'd use ZPOPMIN here, but it's only available in Redis 5.0+
-	# return db.zpopmin("vlab:boardclass:{}:unlockedboards".format(boardclass))
 	return _zpopmin(db, "vlab:boardclass:{}:unlockedboards".format(boardclass))
+
+
+def allocate_available_board_of_class(db, boardclass):
+	"""
+	Allocate a board of a given boardclass by popping the least-recently-used board from the availableboards set
+	"""
+	return _zpopmin(db, "vlab:boardclass:{}:availableboards".format(boardclass))
+
+
+def start_session(db, board, boardclass, username, start_time):
+	"""
+	Start session for the board 'board', with the given 'username'.
+	"""
+	lock_board(db, board, boardclass, username, start_time)
+	db.zrem("vlab:boardclass:{}:availableboards".format(boardclass), board)
+	db.set("vlab:board:{}:session:username".format(board), username)
+	db.set("vlab:board:{}:session:starttime".format(board), start_time)
+	db.set("vlab:board:{}:session:pingtime".format(board), start_time)
+
+
+def end_session(db, board, boardclass):
+	"""
+	End session for the board 'board' of a given 'boardclass'.
+	"""
+	end_time = int(time.time())
+	db.delete("vlab:board:{}:session:username".format(board))
+	db.delete("vlab:board:{}:session:starttime".format(board))
+	db.delete("vlab:board:{}:session:pingtime".format(board))
+	db.zadd("vlab:boardclass:{}:availableboards".format(boardclass), end_time, board)
+	return True
+
+
+def end_session_if_user(db, board, boardclass, user):
+	"""
+	End session for the board 'board' of a given 'boardclass', if locked by 'user'.
+	"""
+	if db.get("vlab:board:{}:session:username".format(board)) == user:
+		return end_session(db, board, boardclass)
+	else:
+		return False
+
+
+def end_session_if_user_time(db, board, boardclass, user, start_time):
+	"""
+	End session for the board 'board' of a given 'boardclass', if locked by 'user' at 'time'.
+	"""
+	if db.get("vlab:board:{}:session:starttime".format(board)) == str(start_time):
+		return end_session_if_user(db, board, boardclass, user)
+	else:
+		return False
+
+
+def ping_session(db, board):
+	"""
+	Ping session for the board 'board' of a given 'boardclass'.
+	"""
+	ping_time = int(time.time())
+	db.set("vlab:board:{}:session:pingtime".format(board), ping_time)
+	return True
+
+
+def ping_session_if_user(db, board, user):
+	"""
+	Ping session for the board 'board' of a given 'boardclass', if locked by 'user'.
+	"""
+	if db.get("vlab:board:{}:session:username".format(board)) == user:
+		return ping_session(db, board)
+	else:
+		return False
+
+
+def ping_session_if_user_time(db, board, user, start_time):
+	"""
+	Ping session for the board 'board' of a given 'boardclass', if locked by 'user' at 'time'.
+	"""
+	if db.get("vlab:board:{}:session:starttime".format(board)) == str(start_time):
+		return ping_session_if_user(db, board, user)
+	else:
+		return False

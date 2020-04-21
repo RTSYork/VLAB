@@ -190,26 +190,44 @@ def parse_checkboards_output(text):
 			server = board[1]
 			status = board[2]
 			pattern1 = re.compile("Available since (\\d*)")
-			lock_info1 = pattern1.findall(status)
+			status1 = pattern1.findall(status)
 			pattern2 = re.compile("Locked by (.*) at (\\d*) until (\\d*)\\.")
-			lock_info2 = pattern2.findall(status)
-			pattern3 = re.compile("Board .* marked as locked but has no lock info\\. Setting available\\.")
-			lock_info3 = pattern3.findall(status)
-			if len(lock_info1) > 0:
-				unlocked_time = lock_info1[0]
+			status2 = pattern2.findall(status)
+			pattern3 = re.compile("In use by (.*) since (\\d*) \\(last ping at (\\d*)\\)\\.")
+			status3 = pattern3.findall(status)
+			pattern4 = re.compile("In use, but unlocked since (\\d*)\\.")
+			status4 = pattern4.findall(status)
+			pattern5 = re.compile("Board .* marked as locked but has no lock info\\. Setting as unlocked\\.")
+			status5 = pattern5.findall(status)
+			pattern6 = re.compile("Board .* marked as in-use but has no session info\\. Setting as available\\.")
+			status6 = pattern6.findall(status)
+			if len(status1) > 0:
+				unlocked_time = status1[0]
 				if unlocked_time == "0":
 					since = "first connected"
 				else:
 					since = parse_timestamp(unlocked_time)
-				status = "Available since {}".format(since)
-			elif len(lock_info2) > 0:
-				user = lock_info2[0][0]
-				lock_time = parse_timestamp(lock_info2[0][1])
-				expiry_time = parse_timestamp(lock_info2[0][2])
-				status = "Locked by {} ({} to {})".format(user, lock_time, expiry_time)
-			elif len(lock_info3) > 0:
-				status = "Locked but no lock info - now set as available"
-			result += "{}\t{}\t{}\n".format(server, serial, status)
+				formatted_status = "Available since {}".format(since)
+			elif len(status2) > 0:
+				user = status2[0][0]
+				lock_time = parse_timestamp(status2[0][1])
+				expiry_time = parse_timestamp(status2[0][2])
+				formatted_status = "Locked by {} ({} to {})".format(user, lock_time, expiry_time)
+			elif len(status3) > 0:
+				user = status3[0][0]
+				start_time = parse_timestamp(status3[0][1])
+				ping_time = parse_timestamp(status3[0][2])
+				formatted_status = "In use by {} since {} (last ping at {})".format(user, start_time, ping_time)
+			elif len(status4) > 0:
+				lock_expiry_time = parse_timestamp(status4[0][0])
+				formatted_status = "In use, but unlocked since {}".format(lock_expiry_time)
+			elif len(status5) > 0:
+				formatted_status = "Locked but no lock info - now set as unlocked"
+			elif len(status6) > 0:
+				formatted_status = "In use but no session info - now set as available"
+			else:
+				formatted_status = status
+			result += "{}\t{}\t{}\n".format(server, serial, formatted_status)
 		result += "\n**********************************************\n"
 	return result
 

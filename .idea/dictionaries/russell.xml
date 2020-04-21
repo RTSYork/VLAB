@@ -3,6 +3,7 @@
     <words>
       <w>allnew</w>
       <w>allowedboards</w>
+      <w>availableboards</w>
       <w>boardclass</w>
       <w>boardclasses</w>
       <w>boardhost</w>
@@ -10,6 +11,7 @@
       <w>boardserver</w>
       <w>boardtype</w>
       <w>checkboards</w>
+      <w>cronjob</w>
       <w>defhstatus</w>
       <w>deregistered</w>
       <w>deregistering</w>
@@ -29,8 +31,11 @@
       <w>locktime</w>
       <w>logparse</w>
       <w>nofreeboards</w>
+      <w>pingtime</w>
       <w>regenkeys</w>
       <w>screenrc</w>
+      <w>starttime</w>
+      <w>stty</w>
       <w>uart</w>
       <w>udev</w>
       <w>unlockedboards</w>

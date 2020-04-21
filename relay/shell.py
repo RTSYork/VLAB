@@ -71,45 +71,48 @@ if not db.get("vlab:user:{}:overlord".format(username)):
 	             )
 
 # Do we already own it?
-# For each board in the board class, check if one is locked by us
+# For each board in the board class, check if one is in use or locked by us
 board = None
 for b in db.smembers("vlab:boardclass:{}:boards".format(boardclass)):
-	if db.get("vlab:board:{}:lock:username".format(b)) == username:
+	if db.get("vlab:board:{}:session:username".format(b)) == username \
+			or db.get("vlab:board:{}:lock:username".format(b)) == username:
 		board = b
+		print("User already has an active session on board '{}', so reusing...".format(board))
 		break
 
-locktime = int(time.time())
+session_start_time = int(time.time())
 
 if board is None:
 	# Try to grab a lock for the boardclass
 	db.set("vlab:boardclass:{}:locking".format(boardclass), 1)
 	db.expire("vlab:boardclass:{}:locking".format(boardclass), 2)
 
-	print("Requesting least-recently-unlocked board of class '{}'...".format(boardclass))
-	board = allocate_board_of_class(db, boardclass)
+	print("Requesting least-recently-used board of class '{}'...".format(boardclass))
+	board = allocate_available_board_of_class(db, boardclass)
 
 	if board is None:
-		db.delete("vlab:boardclass:{}:locking".format(boardclass))
-		print("All boards of type '{}' are currently locked by other VLAB users.".format(boardclass))
-		print("Try again in a few minutes (locks expire after {} minutes).".format(int(MAX_LOCK_TIME / 60)))
-		log.critical("NOFREEBOARDS: {}, {}".format(username, boardclass))
-		sys.exit(1)
+		print("No available boards of class '{}'. Checking for in-use boards with expired locks...".format(boardclass))
+		print("Requesting least-recently-unlocked board of class '{}'...".format(boardclass))
+		board = allocate_unlocked_board_of_class(db, boardclass)
 
-	db.set("vlab:board:{}:lock:username".format(board), username)
-	db.set("vlab:board:{}:lock:time".format(board), locktime)
-else:
-	# Refresh the lock time
-	db.set("vlab:board:{}:lock:time".format(board), locktime)
+		if board is None:
+			db.delete("vlab:boardclass:{}:locking".format(boardclass))
+			print("All boards of type '{}' are currently locked by other VLAB users.".format(boardclass))
+			print("Try again in a few minutes (locks expire after {} minutes).".format(int(MAX_LOCK_TIME / 60)))
+			log.critical("NOFREEBOARDS: {}, {}".format(username, boardclass))
+			sys.exit(1)
 
+start_session(db, board, boardclass, username, session_start_time)
+log.info("START: {}, {}:{}".format(username, boardclass, board))
 unlocked_count = db.zcard("vlab:boardclass:{}:unlockedboards".format(boardclass))
 log.info("LOCK: {}, {}:{}, {} remaining in set".format(username, boardclass, board, unlocked_count))
 
 # Fetch the details of the locked board
 board_details = get_board_details(db, board, ["user", "server", "port"])
 
-lock_start = time.strftime("%H:%M:%S %Z", time.localtime(locktime))
-lock_end = time.strftime("%d/%m/%y at %H:%M:%S %Z", time.localtime(locktime + MAX_LOCK_TIME))
-lock_end_caps = time.strftime("%d/%m/%y AT %H:%M:%S %Z", time.localtime(locktime + MAX_LOCK_TIME))
+lock_start = time.strftime("%H:%M:%S %Z", time.localtime(session_start_time))
+lock_end = time.strftime("%d/%m/%y at %H:%M:%S %Z", time.localtime(session_start_time + MAX_LOCK_TIME))
+lock_end_caps = time.strftime("%d/%m/%y AT %H:%M:%S %Z", time.localtime(session_start_time + MAX_LOCK_TIME))
 print("Locked board '{}' of type '{}' for user '{}' at {} for {} seconds"
       .format(board, boardclass, username, lock_start, MAX_LOCK_TIME))
 print("*******************************************************************************************")
@@ -154,10 +157,32 @@ cmd = "echo -e '{}' > /vlab/vlabscreenrc;" \
 	.format(screenrc)
 ssh_cmd = "ssh -q -4 {} -o \"StrictHostKeyChecking no\" -e none -i {} -p {} -tt {} \"{}\""\
 	.format(tunnel, keyfile, port, target, cmd)
-subprocess.run(ssh_cmd, shell=True)
+proc = subprocess.Popen(ssh_cmd, shell=True)
+
+# Wait for the process to end, while pinging session and checking locks every 10 seconds
+locked = True
+while True:
+	try:
+		current_time = int(time.time())
+		if locked and current_time - int(session_start_time) > MAX_LOCK_TIME:
+			if unlock_board_if_user_time(db, board, boardclass, username, session_start_time):
+				locked = False
+				log.info("RELEASE: {}, {}:{}".format(username, boardclass, board))
+		if ping_session_if_user_time(db, board, username, session_start_time):
+			log.debug("PING: {}, {}:{} at {}".format(username, boardclass, board, current_time))
+		else:
+			proc.terminate()
+			print("Your lock has expired and board '{}' has been allocated to another user.\r".format(board))
+			break
+		proc.wait(10)
+		break
+	except subprocess.TimeoutExpired:
+		continue
+
+# Fix terminal in case screen has left it in a bad state
+subprocess.run("stty sane", shell=True)
 
 print("User disconnected. Cleaning up...")
-log.info("RELEASE: {}, {}:{}".format(username, boardclass, board))
 
 if db.get("vlab:knownboard:{}:reset".format(board)) == "true":
 	cmd = "/opt/xsct/bin/xsdb /vlab/reset.tcl"
@@ -166,6 +191,9 @@ if db.get("vlab:knownboard:{}:reset".format(board)) == "true":
 	print("Resetting board...")
 	subprocess.run(ssh_cmd, shell=True)
 
-print("Releasing lock...")
-unlock_board_if_user_time(db, board, boardclass, username, locktime)
+print("Releasing lock and ending session...")
+if unlock_board_if_user_time(db, board, boardclass, username, session_start_time):
+	log.info("RELEASE: {}, {}:{}".format(username, boardclass, board))
+if end_session_if_user_time(db, board, boardclass, username, session_start_time):
+	log.info("END: {}, {}:{}".format(username, boardclass, board))
 print("Disconnected successfully.")
