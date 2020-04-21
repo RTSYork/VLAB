@@ -44,14 +44,19 @@ if arg == 'getport':
 	print("VLABPORT:{}".format(port))
 	sys.exit(0)
 
-# Otherwise the arg should be of the form boardclass:port
-pos = arg.find(':')
-if pos == -1:
+# Otherwise the arg should be of the form boardclass:port, or boardclass:port:serial to request a specific board
+args = arg.split(":")
+if len(args) < 2:
 	print("Argument should be of the form boardclass:port")
 	sys.exit(1)
 
-boardclass = arg[:pos]
-tunnel_port = arg[(pos + 1):]
+boardclass = args[0]
+tunnel_port = args[1]
+
+requested_serial = None
+if len(args) == 3:
+	requested_serial = args[2]
+
 try:
 	tunnel_port = int(tunnel_port)
 except ValueError:
@@ -62,6 +67,14 @@ except ValueError:
 check_in_set(db, 'vlab:boardclasses', boardclass, "Board class '{}' does not exist.".format(boardclass))
 check_in_set(db, 'vlab:users', username, "User '{}' is not a VLAB user.".format(username))
 
+if requested_serial != None:
+	if not db.get("vlab:user:{}:overlord".format(username)):
+		print("Only overlord users can request specific boards.")
+		sys.exit(1)
+
+	#Does the requested board exist?
+	check_in_set(db, 'vlab:boardclass:{}:boards'.format(boardclass), requested_serial "Board {} does not exist.".format(requested_serial))
+
 # Can the user access the requested boardclass?
 # Either they are an overlord user, or vlab:user:<username>:allowedboards includes the boardclass in question
 if not db.get("vlab:user:{}:overlord".format(username)):
@@ -70,36 +83,60 @@ if not db.get("vlab:user:{}:overlord".format(username)):
 	             "User '{}' cannot access board class '{}'.".format(username, boardclass)
 	             )
 
-# Do we already own it?
-# For each board in the board class, check if one is locked by us
-board = None
-for b in db.smembers("vlab:boardclass:{}:boards".format(boardclass)):
-	if db.get("vlab:board:{}:lock:username".format(b)) == username:
-		board = b
-		break
 
-locktime = int(time.time())
+# Default behaviour is to first check that if we already have a lock, to simply refresh that one
+# Otherwise, to find the least-recently locked board from the requested class
 
-if board is None:
-	# Try to grab a lock for the boardclass
-	db.set("vlab:boardclass:{}:locking".format(boardclass), 1)
-	db.expire("vlab:boardclass:{}:locking".format(boardclass), 2)
+# If a specific board serial is requested, these checks are ignored (because only Overload can request specific boards)
+if requested_serial != None:
+	locktime = int(time.time())
 
-	print("Requesting least-recently-unlocked board of class '{}'...".format(boardclass))
-	board = allocate_board_of_class(db, boardclass)
+	#If we don't already own it	
+	if not db.get("vlab:board:{}:lock:username".format(requested_serial)) == username:
+		# Is it available?
+		if db.zrem("vlab:boardclass:{}:unlockedboards".format(boardclass), requested_serial) != None:
+			# It was removed, so it was available
+			db.set("vlab:board:{}:lock:username".format(requested_serial), username)
+			db.set("vlab:board:{}:lock:time".format(requested_serial), locktime)
+		else:
+			# The board wasn't available
+			username = db.get("vlab:board:{}:lock:username".format(requested_serial))
+			print("Requested board is currently locked by {}.".format(username))
+			sys.exit(1)
+	else:
+		# Refresh the lock time
+		db.set("vlab:board:{}:lock:time".format(requested_serial), locktime)
+else:
+	# Do we already own it?
+	# For each board in the board class, check if one is locked by us
+	board = None
+	for b in db.smembers("vlab:boardclass:{}:boards".format(boardclass)):
+		if db.get("vlab:board:{}:lock:username".format(b)) == username:
+			board = b
+			break
+
+	locktime = int(time.time())
 
 	if board is None:
-		db.delete("vlab:boardclass:{}:locking".format(boardclass))
-		print("All boards of type '{}' are currently locked by other VLAB users.".format(boardclass))
-		print("Try again in a few minutes (locks expire after {} minutes).".format(int(MAX_LOCK_TIME / 60)))
-		log.critical("NOFREEBOARDS: {}, {}".format(username, boardclass))
-		sys.exit(1)
+		# Try to grab a lock for the boardclass
+		db.set("vlab:boardclass:{}:locking".format(boardclass), 1)
+		db.expire("vlab:boardclass:{}:locking".format(boardclass), 2)
 
-	db.set("vlab:board:{}:lock:username".format(board), username)
-	db.set("vlab:board:{}:lock:time".format(board), locktime)
-else:
-	# Refresh the lock time
-	db.set("vlab:board:{}:lock:time".format(board), locktime)
+		print("Requesting least-recently-unlocked board of class '{}'...".format(boardclass))
+		board = allocate_board_of_class(db, boardclass)
+
+		if board is None:
+			db.delete("vlab:boardclass:{}:locking".format(boardclass))
+			print("All boards of type '{}' are currently locked by other VLAB users.".format(boardclass))
+			print("Try again in a few minutes (locks expire after {} minutes).".format(int(MAX_LOCK_TIME / 60)))
+			log.critical("NOFREEBOARDS: {}, {}".format(username, boardclass))
+			sys.exit(1)
+
+		db.set("vlab:board:{}:lock:username".format(board), username)
+		db.set("vlab:board:{}:lock:time".format(board), locktime)
+	else:
+		# Refresh the lock time
+		db.set("vlab:board:{}:lock:time".format(board), locktime)
 
 unlocked_count = db.zcard("vlab:boardclass:{}:unlockedboards".format(boardclass))
 log.info("LOCK: {}, {}, {} remaining in set".format(username, boardclass, unlocked_count))
