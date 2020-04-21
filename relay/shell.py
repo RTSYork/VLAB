@@ -73,7 +73,7 @@ if requested_serial != None:
 		sys.exit(1)
 
 	#Does the requested board exist?
-	check_in_set(db, 'vlab:boardclass:{}:boards'.format(boardclass), requested_serial "Board {} does not exist.".format(requested_serial))
+	check_in_set(db, 'vlab:boardclass:{}:boards'.format(boardclass), requested_serial, "Board {} does not exist.".format(requested_serial))
 
 # Can the user access the requested boardclass?
 # Either they are an overlord user, or vlab:user:<username>:allowedboards includes the boardclass in question
@@ -94,7 +94,7 @@ if requested_serial != None:
 	#If we don't already own it	
 	if not db.get("vlab:board:{}:lock:username".format(requested_serial)) == username:
 		# Is it available?
-		if db.zrem("vlab:boardclass:{}:unlockedboards".format(boardclass), requested_serial) != None:
+		if db.zrem("vlab:boardclass:{}:unlockedboards".format(boardclass), requested_serial) > 0:
 			# It was removed, so it was available
 			db.set("vlab:board:{}:lock:username".format(requested_serial), username)
 			db.set("vlab:board:{}:lock:time".format(requested_serial), locktime)
@@ -106,6 +106,8 @@ if requested_serial != None:
 	else:
 		# Refresh the lock time
 		db.set("vlab:board:{}:lock:time".format(requested_serial), locktime)
+
+	board = requested_serial
 else:
 	# Do we already own it?
 	# For each board in the board class, check if one is locked by us
