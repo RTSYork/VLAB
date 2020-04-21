@@ -45,6 +45,7 @@ parser.add_argument('-k', '--key', nargs=1, help="VLAB keyfile to use for authen
 parser.add_argument('-u', '--user', nargs=1, help="VLAB username.")
 
 parser.add_argument('-b', '--board', nargs=1, default=["vlab_zybo-z7"], help="Requested board class.")
+parser.add_argument('-s', '--serial', nargs=1, help="Requested board serial number.")
 
 parser.add_argument('-v', '--verbose', default=False, help="Enable verbose logging.", action='store_true')
 parsed = parser.parse_args()
@@ -156,15 +157,20 @@ ssh_user = ""
 if parsed.user != None:
 	ssh_user = " -l {} ".format(parsed.user[0])
 
-ssh_cmd = "ssh -L 9001:localhost:9001 -L {}:localhost:{} -o \"StrictHostKeyChecking no\" -e none -i {} {} -p {} -tt {} {}:{}".format(
+# Assemble the command we send to the relay shell
+if parsed.serial != None:
+	relay_command = "{}:{}:{}".format(parsed.board[0], ephemeral_port, parsed.serial[0])
+else:
+	relay_command = "{}:{}".format(parsed.board[0], ephemeral_port)
+
+ssh_cmd = "ssh -L 9001:localhost:9001 -L {}:localhost:{} -o \"StrictHostKeyChecking no\" -e none -i {} {} -p {} -tt {} {}".format(
 	parsed.localport[0],
 	ephemeral_port,
 	parsed.key[0],
 	ssh_user,
 	parsed.port[0],
 	parsed.relay[0],
-	parsed.board[0],
-	ephemeral_port)
+	relay_command)
 
 if parsed.verbose:
 	print("Second ssh command: {}".format(ssh_cmd))
