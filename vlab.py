@@ -164,7 +164,7 @@ if parsed.serial != None:
 else:
 	relay_command = "{}:{}".format(parsed.board[0], ephemeral_port)
 
-ssh_cmd = "ssh -L {}:localhost:9001 -L {}:localhost:{} -o \"StrictHostKeyChecking no\" -e none -i {} {} -p {} -tt {} {}".format(
+ssh_cmd = "ssh -L {}:localhost:9001 -L {}:localhost:{} -e none -i {} {} -p {} -tt {} {}".format(
 	parsed.webport[0],
 	parsed.localport[0],
 	ephemeral_port,
