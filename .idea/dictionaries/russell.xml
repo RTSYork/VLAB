@@ -28,6 +28,7 @@
       <w>knownboard</w>
       <w>knownboards</w>
       <w>lastunlocked</w>
+      <w>localport</w>
       <w>locktime</w>
       <w>logparse</w>
       <w>nofreeboards</w>
@@ -46,6 +47,7 @@
       <w>vlabkey</w>
       <w>vlabport</w>
       <w>vlabscreenrc</w>
+      <w>webport</w>
       <w>xilinx</w>
       <w>xsct</w>
       <w>xsdb</w>
