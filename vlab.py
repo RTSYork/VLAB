@@ -173,7 +173,8 @@ if parsed.serial is not None:
 else:
 	relay_command = "{}:{}".format(parsed.board[0], ephemeral_port)
 
-ssh_cmd = "ssh -L {}:localhost:9001 -L {}:localhost:{} -o PasswordAuthentication=no -e none -i {} {} -p {} -tt {} {}"\
+ssh_cmd = "ssh -L {}:localhost:9001 -L {}:localhost:{} -o PasswordAuthentication=no -o ExitOnForwardFailure=yes " \
+          "-e none -i {} {} -p {} -tt {} {}"\
 	.format(
 	        parsed.webport[0],
 	        parsed.localport[0],
