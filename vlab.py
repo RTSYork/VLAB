@@ -17,6 +17,7 @@ Ian Gray, 2017
 
 import argparse
 import os
+import socket
 import sys
 import urllib.request
 import urllib.error
@@ -91,6 +92,23 @@ if not parsed.key:
 	err("Specify a keyfile with --key.")
 if not os.path.isfile(parsed.key[0]):
 	err("Keyfile {} does not exist. Specify a keyfile with --key.".format(parsed.key[0]))
+
+# Check that the requested ports are free to use
+local_port = int(parsed.localport[0])
+web_port = int(parsed.webport[0])
+with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+	local_port_in_use = (s.connect_ex(('localhost', local_port)) == 0)
+with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+	web_port_in_use = (s.connect_ex(('localhost', web_port)) == 0)
+
+if local_port_in_use:
+	print("Local port {} is in use by another user on this machine, or otherwise unavailable. "
+	      "Specify a different port with --localport.".format(local_port))
+if web_port_in_use:
+	print("Web forward port {} is in use by another user on this machine, or otherwise unavailable. "
+	      "Specify a different port with --webport.".format(web_port))
+if local_port_in_use or web_port_in_use:
+	exit(1)
 
 # First get a port to use on the relay server
 if parsed.user is not None:
@@ -176,8 +194,8 @@ else:
 ssh_cmd = "ssh -L {}:localhost:9001 -L {}:localhost:{} -o PasswordAuthentication=no -o ExitOnForwardFailure=yes " \
           "-e none -i {} {} -p {} -tt {} {}"\
 	.format(
-	        parsed.webport[0],
-	        parsed.localport[0],
+	        web_port,
+	        local_port,
 	        ephemeral_port,
 	        parsed.key[0],
 	        ssh_user,
