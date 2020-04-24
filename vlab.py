@@ -40,6 +40,7 @@ parser.add_argument('-r', '--relay', nargs=1, default=["rts001.cs.york.ac.uk"],
                     help="The hostname of the relay server.")
 parser.add_argument('-p', '--port', nargs=1, default=["2222"], help="The ssh port of the relay server to connect to.")
 parser.add_argument('-l', '--localport', nargs=1, default=["12345"], help="Local port to forward connections to.")
+parser.add_argument('-w', '--webport', nargs=1, default=["9001"], help="Local port to forward web server connections to.")
 
 parser.add_argument('-k', '--key', nargs=1, help="VLAB keyfile to use for authentication.")
 parser.add_argument('-u', '--user', nargs=1, help="VLAB username.")
@@ -163,7 +164,8 @@ if parsed.serial != None:
 else:
 	relay_command = "{}:{}".format(parsed.board[0], ephemeral_port)
 
-ssh_cmd = "ssh -L 9001:localhost:9001 -L {}:localhost:{} -o \"StrictHostKeyChecking no\" -e none -i {} {} -p {} -tt {} {}".format(
+ssh_cmd = "ssh -L {}:localhost:9001 -L {}:localhost:{} -o \"StrictHostKeyChecking no\" -e none -i {} {} -p {} -tt {} {}".format(
+	parsed.webport[0],
 	parsed.localport[0],
 	ephemeral_port,
 	parsed.key[0],
