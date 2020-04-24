@@ -38,17 +38,22 @@ def err(s):
 parser = argparse.ArgumentParser(description="VLAB client script")
 parser.add_argument('-r', '--relay', nargs=1, default=["rts001.cs.york.ac.uk"],
                     help="The hostname of the relay server.")
-parser.add_argument('-p', '--port', nargs=1, default=["2222"], help="The ssh port of the relay server to connect to.")
-parser.add_argument('-l', '--localport', nargs=1, default=["12345"], help="Local port to forward connections to.")
-parser.add_argument('-w', '--webport', nargs=1, default=["9001"], help="Local port to forward web server connections to.")
-
-parser.add_argument('-k', '--key', nargs=1, help="VLAB keyfile to use for authentication.")
-parser.add_argument('-u', '--user', nargs=1, help="VLAB username.")
-
-parser.add_argument('-b', '--board', nargs=1, default=["vlab_zybo-z7"], help="Requested board class.")
-parser.add_argument('-s', '--serial', nargs=1, help="Requested board serial number.")
-
-parser.add_argument('-v', '--verbose', default=False, help="Enable verbose logging.", action='store_true')
+parser.add_argument('-p', '--port', nargs=1, default=["2222"],
+                    help="The ssh port of the relay server to connect to.")
+parser.add_argument('-l', '--localport', nargs=1, default=["12345"],
+                    help="Local port to forward connections to.")
+parser.add_argument('-w', '--webport', nargs=1, default=["9001"],
+                    help="Local port to forward web server connections to.")
+parser.add_argument('-k', '--key', nargs=1,
+                    help="VLAB keyfile to use for authentication.")
+parser.add_argument('-u', '--user', nargs=1,
+                    help="VLAB username.")
+parser.add_argument('-b', '--board', nargs=1, default=["vlab_zybo-z7"],
+                    help="Requested board class.")
+parser.add_argument('-s', '--serial', nargs=1,
+                    help="Requested board serial number.")
+parser.add_argument('-v', '--verbose', default=False, action='store_true',
+                    help="Enable verbose logging.")
 parsed = parser.parse_args()
 
 error_info = "Read the instructions at\n" \
@@ -88,8 +93,9 @@ if not os.path.isfile(parsed.key[0]):
 	err("Keyfile {} does not exist. Specify a keyfile with --key.".format(parsed.key[0]))
 
 # First get a port to use on the relay server
-if parsed.user != None:
-	ssh_cmd = ['ssh', '-oPasswordAuthentication=no', '-i', parsed.key[0], '-p', parsed.port[0], '-l', parsed.user[0], parsed.relay[0], 'getport']
+if parsed.user is not None:
+	ssh_cmd = ['ssh', '-oPasswordAuthentication=no', '-i', parsed.key[0], '-p', parsed.port[0], '-l', parsed.user[0],
+	           parsed.relay[0], 'getport']
 else:
 	ssh_cmd = ['ssh', '-oPasswordAuthentication=no', '-i', parsed.key[0], '-p', parsed.port[0], parsed.relay[0], 'getport']
 if parsed.verbose:
@@ -99,6 +105,7 @@ stdout, stderr = Popen(ssh_cmd, stdout=PIPE, stderr=PIPE).communicate()
 try:
 	error = stderr.decode('ascii').strip()
 except UnicodeError:
+	error = ""
 	reply = None
 	err("Could not decode error output from ssh subprocess")
 
@@ -121,13 +128,15 @@ if len(stdout) == 0 and len(error) > 0:
 		errstr += "\t./vlab.py -k {} -u myusername\n".format(parsed.key[0])
 	elif error.find("Resource temporarily unavailable") != -1:
 		errstr += error
-		errstr += "\nThis often means a firewall has blocked the connection. Try temporarily disabling your firewall application.\n"
+		errstr += "\nThis often means a firewall has blocked the connection. Try temporarily disabling your firewall " \
+		          "application.\n"
 	elif error.find("Connection closed by") != -1:
 		errstr += error
 		errstr += "\nEnsure that you have set the correct usernames in your ssh config.\n"
 	elif error.find("REMOTE HOST IDENTIFICATION HAS CHANGED") != -1:
 		errstr += error
-		errstr += "\n\n\nThe host key in the VLAB has changed. This should not happen and might indicate a man-in-the-middle attack.\n"
+		errstr += "\n\n\nThe host key in the VLAB has changed. This should not happen and might indicate a " \
+		          "man-in-the-middle attack.\n"
 		errstr += "If you are sure this is not the case, delete the line mentioned above from the file ~/.ssh/known_hosts\n"
 	else:
 		print(error)
@@ -155,11 +164,11 @@ print("Tunnelling to relay server '{}' using port {}...".format(parsed.relay[0],
 
 # Now create the actual connection
 ssh_user = ""
-if parsed.user != None:
+if parsed.user is not None:
 	ssh_user = " -l {} ".format(parsed.user[0])
 
 # Assemble the command we send to the relay shell
-if parsed.serial != None:
+if parsed.serial is not None:
 	relay_command = "{}:{}:{}".format(parsed.board[0], ephemeral_port, parsed.serial[0])
 else:
 	relay_command = "{}:{}".format(parsed.board[0], ephemeral_port)
