@@ -31,8 +31,8 @@ current_branch = 'master'
 ############################
 
 
-def err(s):
-	print(s)
+def err(error_string):
+	print(error_string)
 	sys.exit(1)
 
 
@@ -102,13 +102,15 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
 	web_port_in_use = (s.connect_ex(('localhost', web_port)) == 0)
 
 if local_port_in_use:
-	print("Local port {} is in use by another user on this machine, or otherwise unavailable. "
-	      "Specify a different port with --localport.".format(local_port))
+	print("Error: Local port {} is in use by another user on this machine, or otherwise unavailable. "
+	      "Specify a different port with --localport or -l.".format(local_port))
 if web_port_in_use:
-	print("Web forward port {} is in use by another user on this machine, or otherwise unavailable. "
-	      "Specify a different port with --webport.".format(web_port))
+	print("Error: Web forward port {} is in use by another user on this machine, or otherwise unavailable. "
+	      "Specify a different port with --webport or -w.".format(web_port))
 if local_port_in_use or web_port_in_use:
-	exit(1)
+	err("\nEach user must choose their own unique local ports when running on a shared machine (e.g. a departmental "
+	    "server).\nSee the section on 'Using the VLAB on a Shared Machine' at "
+	    "https://wiki.york.ac.uk/display/RTS/Using+the+Xilinx+Tools+Remotely for more information.")
 
 # First get a port to use on the relay server
 if parsed.user is not None:
