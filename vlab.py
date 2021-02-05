@@ -26,7 +26,7 @@ from subprocess import Popen, PIPE
 ############################
 # Update version string here and in 'current_version' file when updating this script
 # Version number must be in 'x.y.z' format
-current_version = '1.2.1'
+current_version = '1.2.2'
 current_branch = 'master'
 ############################
 
@@ -58,7 +58,7 @@ parser.add_argument('-v', '--verbose', default=False, action='store_true',
 parsed = parser.parse_args()
 
 error_info = "Read the instructions at\n" \
-             "\thttps://wiki.york.ac.uk/display/RTS/Using+the+Xilinx+Tools+Remotely"
+             "\thttps://wiki.york.ac.uk/display/RTS/The+VLAB+Quickstart+Guide"
 
 
 # Check for an update from GitHub repository
@@ -134,7 +134,8 @@ if len(stdout) == 0 and len(error) > 0:
 	if error.find("UNPROTECTED PRIVATE KEY FILE") != -1:
 		errstr += "The permissions on the key {} are too permissive.\n".format(parsed.key[0])
 		errstr += "Only your user should be able to access the key, or it will be rejected by ssh.\n"
-		errstr += "To fix this, run the command\n\tchmod 0600 {}\n".format(parsed.key[0])
+		errstr += "To fix this, on Linux run the command\n\tchmod 0600 {}\n".format(parsed.key[0])
+		errstr += "On Windows, see the instructions at the link below.\n"
 	elif error.find("Operation timed out") != -1 or error.find("Connection refused") != -1:
 		errstr += "Cannot see the VLAB relay server: {}\n".format(parsed.relay[0])
 		errstr += "Try the following:\n\tssh {}\n".format(parsed.relay[0])
