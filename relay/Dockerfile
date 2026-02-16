@@ -8,11 +8,10 @@ RUN apt-get install -y redis-server
 EXPOSE 22
 EXPOSE 6379
 
-#node.js, npm, and Frontail
-RUN apt-get -y install curl gnupg
-RUN curl -sL https://deb.nodesource.com/setup_12.x | bash -
+# Node.js 22 LTS, npm, and Frontail
+RUN apt-get -y install curl gnupg ca-certificates
+RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
 RUN apt-get -y install nodejs
-RUN npm install --production
 RUN npm install frontail -g
 
 EXPOSE 9001

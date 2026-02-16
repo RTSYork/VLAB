@@ -1,4 +1,4 @@
-FROM ubuntu:bionic
+FROM ubuntu:jammy
 
 # Prerequisites
 RUN apt-get update; DEBIAN_FRONTEND=noninteractive apt-get install -y openssh-server supervisor python3-redis cron tzdata

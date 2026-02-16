@@ -10,13 +10,15 @@ import sys
 import time
 import redis
 
+MAX_LOCK_TIME = 3600
+
 
 def connect_to_redis(host):
 	"""
 	Connect to the redis server
 	"""
 	try:
-		db = redis.StrictRedis(host=host, port=6379, db=0, decode_responses=True)
+		db = redis.Redis(host=host, port=6379, db=0, decode_responses=True)
 		db.ping()
 	except redis.exceptions.ConnectionError as e:
 		print("Error whilst connecting to host {}\n{}".format(host, e))
@@ -70,7 +72,7 @@ def unlock_board(db, board, boardclass):
 	unlock_time = int(time.time())
 	db.delete("vlab:board:{}:lock:username".format(board))
 	db.delete("vlab:board:{}:lock:time".format(board))
-	db.zadd("vlab:boardclass:{}:unlockedboards".format(boardclass), unlock_time, board)
+	db.zadd("vlab:boardclass:{}:unlockedboards".format(boardclass), {board: unlock_time})
 	return True
 
 
@@ -193,7 +195,7 @@ def end_session(db, board, boardclass):
 	db.delete("vlab:board:{}:session:username".format(board))
 	db.delete("vlab:board:{}:session:starttime".format(board))
 	db.delete("vlab:board:{}:session:pingtime".format(board))
-	db.zadd("vlab:boardclass:{}:availableboards".format(boardclass), end_time, board)
+	db.zadd("vlab:boardclass:{}:availableboards".format(boardclass), {board: end_time})
 	return True
 
 

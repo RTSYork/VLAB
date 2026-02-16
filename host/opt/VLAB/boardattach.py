@@ -60,7 +60,7 @@ except FileNotFoundError as e:
 	log.info("Cannot find config file `{}`; using default server ({}:{}).".format(CONFIG_FILE, redis_server, redis_port))
 
 try:
-	db = redis.StrictRedis(host=redis_server, port=redis_port, db=0, decode_responses=True)
+	db = redis.Redis(host=redis_server, port=redis_port, db=0, decode_responses=True)
 	db.ping()
 except redis.exceptions.ConnectionError as e:
 	log.critical("Error whilst connecting to host {}\n{}".format(redis_server, e))
@@ -119,7 +119,7 @@ except Exception as e:
 
 # Now we need to see which host port the SSH port on the container was given
 host_port = subprocess.check_output(['docker', 'port', container_name, "22"])
-host_port = str(host_port, 'ascii')
+host_port = str(host_port, 'ascii').strip().split("\n")[0]
 host_port = int(host_port.split(":")[1])
 
 # Set up a cron inside the container to re-register itself periodically
@@ -138,8 +138,8 @@ if db.get("vlab:knownboard:{}:reset".format(serial)) == "true":
 # Set up our boardclass
 db.sadd("vlab:boardclasses", boardclass)
 db.sadd("vlab:boardclass:{}:boards".format(boardclass), serial)
-db.zadd("vlab:boardclass:{}:availableboards".format(boardclass), 0, serial)
-db.zadd("vlab:boardclass:{}:unlockedboards".format(boardclass), 0, serial)
+db.zadd("vlab:boardclass:{}:availableboards".format(boardclass), {serial: 0})
+db.zadd("vlab:boardclass:{}:unlockedboards".format(boardclass), {serial: 0})
 
 # Set up our board with details provided. Remove any locks and sessions.
 db.set("vlab:board:{}:user".format(serial), "root")

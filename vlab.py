@@ -12,7 +12,7 @@ use the -u option.
 The VLAB server and port are given as defaults to the -r and -p arguments so the user should not
 have to specify them, but they can be overridden if required.
 
-Ian Gray, 2017
+Ian Gray, 2017-2026
 """
 
 import argparse
@@ -26,7 +26,7 @@ from subprocess import Popen, PIPE
 ############################
 # Update version string here and in 'current_version' file when updating this script
 # Version number must be in 'x.y.z' format
-current_version = '1.2.3'
+current_version = '1.2.4'
 current_branch = 'master'
 ############################
 
@@ -58,7 +58,7 @@ parser.add_argument('-v', '--verbose', default=False, action='store_true',
 parsed = parser.parse_args()
 
 error_info = "Read the instructions at\n" \
-             "\thttps://wiki.york.ac.uk/display/RTS/The+VLAB+Quickstart+Guide"
+             "\thttps://iangray001.github.io/embs/docs/setup/vlab-quickstart/"
 
 
 # Check for an update from GitHub repository

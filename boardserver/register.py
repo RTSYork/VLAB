@@ -7,6 +7,7 @@ the board details are in the redis server. It does not unlock boards.
 Ian Gray, 2016
 """
 
+import sys
 from vlabredis import *
 
 if len(sys.argv) < 5:

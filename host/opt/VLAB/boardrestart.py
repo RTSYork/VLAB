@@ -50,7 +50,7 @@ except FileNotFoundError as e:
 	log.info("Cannot find config file `{}`; using default server ({}:{}).".format(CONFIG_FILE, redis_server, redis_port))
 
 try:
-	db = redis.StrictRedis(host=redis_server, port=redis_port, db=0, decode_responses=True)
+	db = redis.Redis(host=redis_server, port=redis_port, db=0, decode_responses=True)
 	db.ping()
 except redis.exceptions.ConnectionError as e:
 	log.critical("Error whilst connecting to host {}\n{}".format(redis_server, e))
@@ -72,7 +72,7 @@ except Exception as e:
 
 # The host port of the SSH server could have changed, so get this again
 host_port = subprocess.check_output(['docker', 'port', container_name, "22"])
-host_port = str(host_port, 'ascii')
+host_port = str(host_port, 'ascii').strip().split("\n")[0]
 host_port = int(host_port.split(":")[1])
 
 # Update the cron inside the container with the new port

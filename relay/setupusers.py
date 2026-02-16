@@ -31,7 +31,7 @@ users = config['users']
 connection_attempts = 1
 while True:
 	try:
-		db = redis.StrictRedis(host='localhost', port=6379, db=0, decode_responses=True)
+		db = redis.Redis(host='localhost', port=6379, db=0, decode_responses=True)
 		db.ping()
 		break
 	except redis.exceptions.ConnectionError as c:
@@ -65,7 +65,7 @@ try:
 			else:
 				log.info("\tuseradd complete.")
 			log.info("\tAdding keys for user: {}".format(user))
-			os.mkdir("/home/{}/.ssh".format(user))
+			os.makedirs("/home/{}/.ssh".format(user), exist_ok=True)
 			shutil.copyfile("/vlab/keys/{}.pub".format(user), "/home/{}/.ssh/authorized_keys".format(user))
 			shutil.chown("/home/{}/.ssh/".format(user), user="{}".format(user), group="{}".format(user))
 			shutil.chown("/home/{}/.ssh/authorized_keys".format(user), user="{}".format(user), group="{}".format(user))

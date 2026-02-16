@@ -30,7 +30,6 @@ parser.add_argument('-k', action="store_true", default=True, dest='check_locks')
 parser.add_argument('-v', action="store_true", default=False, dest='verbose')
 parsed = parser.parse_args()
 
-MAX_LOCK_TIME = 600
 PING_TIMEOUT = 30
 KEYS_DIR = "/vlab/keys/"
 

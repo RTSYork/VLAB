@@ -1,5 +1,5 @@
-# Ignore Xilinx Hardware Server bundles
-*Xilinx_HW_Server_*.tar.gz
+# Ignore Vivado Lab Solutions installer bundles
+*Vivado_Lab_Lin_*.tar
 
 # Ignore generated authorized_keys file
 authorized_keys

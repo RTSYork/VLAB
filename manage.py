@@ -46,16 +46,16 @@ def build_arg_parsers():
 def build_docker_image(image_name):
 	def find_hardware_server_archive():
 		"""
-		We need to extract the name of the HW server installer which varies because of the version number
+		We need to extract the name of the Vivado Lab installer which varies because of the version number
 		Returns the base name of the archive, without path or file extensions
 		Errors if there is not exactly one suitable archive.
 		"""
-		res = glob.glob('./boardserver/Xilinx_HW_Server_Lin*')
+		res = glob.glob('./boardserver/Vivado_Lab_Lin*')
 		if len(res) < 1:
-			err("Download the Xilinx Hardware Server tar.gz and place it in the ./boardserver folder before building "
+			err("Download the Vivado Lab Solutions tar.gz and place it in the ./boardserver folder before building "
 			    "this image.")
 		if len(res) > 1:
-			err("There are multiple versions of the Xilinx_HW_Server_Lin in the ./boardserver folder. Select only one.")
+			err("There are multiple versions of the Vivado_Lab_Lin in the ./boardserver folder. Select only one.")
 		name = os.path.basename(res[0])
 		if not name.endswith(".tar.gz"):
 			err("Ensure that you downloaded the .tar.gz version of the Xilinx hardware server.")
@@ -135,24 +135,24 @@ def main():
 
 	elif args.mode == "list":
 		print("Currently available boards:")
-		os.system("docker exec vlab_relay_1 python3 /vlab/checkboards.py -v")
+		os.system("docker exec vlab-relay-1 python3 /vlab/checkboards.py -v")
 
 	elif args.mode == "status":
 		print("**********************************************")
 		print("Current VLAB Status at", current_time())
 		print("**********************************************")
 		# First pass to ping SSH on each board server from the relay
-		subprocess.run(['docker', 'exec', 'vlab_relay_1', 'python3', '/vlab/checkboards.py', '-vs'],
+		subprocess.run(['docker', 'exec', 'vlab-relay-1', 'python3', '/vlab/checkboards.py', '-vs'],
 		               stdout=subprocess.PIPE)
 		# Second pass to get board lock details from relay
-		result = subprocess.run(['docker', 'exec', 'vlab_relay_1', 'python3', '/vlab/checkboards.py', '-v'],
+		result = subprocess.run(['docker', 'exec', 'vlab-relay-1', 'python3', '/vlab/checkboards.py', '-v'],
 		                        stdout=subprocess.PIPE)
 		result_text = result.stdout.decode('utf-8')
 		output = parse_checkboards_output(result_text)
 		print(output)
 
 	elif args.mode == "stats":
-		os.system("docker exec vlab_relay_1 python3 /vlab/logparse.py")
+		os.system("docker exec vlab-relay-1 python3 /vlab/logparse.py")
 
 	else:
 		main_parser.print_usage()

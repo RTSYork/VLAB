@@ -19,9 +19,6 @@ from vlabredis import *
 
 KEYS_DIR = "/vlab/keys/"
 
-# This should match MAX_LOCK_TIME in 'checkboards.py' (a better solution would be good)
-MAX_LOCK_TIME = 600
-
 logging.basicConfig(
 	filename='/vlab/log/access.log', level=logging.INFO, format='%(asctime)s ; %(levelname)s ; %(name)s ; %(message)s')
 log = logging.getLogger(os.path.basename(sys.argv[0]))

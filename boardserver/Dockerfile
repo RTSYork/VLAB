@@ -1,13 +1,13 @@
 FROM vlab/vlabcommon
 
-# This should be set to the name of the Xilinx Hardware Server installer without the .tar.gz extension.
-# Example: "Xilinx_HW_Server_Lin_2016.2_0605_1"
+# This should be set to the name of the Vivado Lab Solutions installer without the .tar extension.
+# Example: "Vivado_Lab_Lin_2025.2_1229_2131"
 ARG HWFILE
 
 RUN apt-get update
 
 # Prerequisites
-RUN apt-get install -y gcc-multilib openjdk-8-jre libxtst6 screen psmisc locales
+RUN apt-get install -y gcc-multilib openjdk-17-jre libxtst6 screen psmisc locales
 
 # Set locales to US to keep the Xilinx tools happy
 RUN locale-gen en_US.UTF-8  
@@ -15,11 +15,11 @@ ENV LANG en_US.UTF-8
 ENV LANGUAGE en_US:en  
 ENV LC_ALL en_US.UTF-8 
 
-# Install the Xilinx hardware server
-ADD "${HWFILE}.tar.gz" /root/
-RUN cd /root/${HWFILE}; ./xsetup --agree XilinxEULA,3rdPartyEULA,WebTalkTerms -b Install -e "Hardware Server (Standalone)" -l "/opt/Xilinx"
+# Install Vivado Lab Solutions (includes hw_server)
+ADD "${HWFILE}.tar" /root/
+RUN cd /root/${HWFILE}; ./xsetup --agree XilinxEULA,3rdPartyEULA -b Install -e "Vivado Lab Edition (Standalone)" -l "/opt/Xilinx"
 RUN cd /; rm -rf /root/${HWFILE}
-RUN ln -s /opt/Xilinx/HWSRVR/*/ /opt/Xilinx/HWSRVR/current
+RUN mkdir -p /opt/Xilinx/Vivado_Lab && ln -s /opt/Xilinx/*/Vivado_Lab /opt/Xilinx/Vivado_Lab/current
 
 # Add the VLAB internal ssh key
 ADD authorized_keys /root/.ssh/
