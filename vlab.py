@@ -43,8 +43,6 @@ parser.add_argument('-p', '--port', nargs=1, default=["2222"],
                     help="The ssh port of the relay server to connect to.")
 parser.add_argument('-l', '--localport', nargs=1, default=["12345"],
                     help="Local port to forward connections to.")
-parser.add_argument('-w', '--webport', nargs=1,
-                    help="Local port to forward web server connections to.")
 parser.add_argument('-k', '--key', nargs=1,
                     help="VLAB keyfile to use for authentication.")
 parser.add_argument('-u', '--user', nargs=1,
@@ -98,24 +96,12 @@ local_port = int(parsed.localport[0])
 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
 	local_port_in_use = (s.connect_ex(('localhost', local_port)) == 0)
 
-if parsed.webport != None:
-	web_port = int(parsed.webport[0])
-	with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-		web_port_in_use = (s.connect_ex(('localhost', web_port)) == 0)
-else:
-	web_port = None
-	web_port_in_use = False
-
 if local_port_in_use:
-	print("Error: Local port {} is in use by another user on this machine, or otherwise unavailable. "
-	      "Specify a different port with --localport or -l.".format(local_port))
-if web_port_in_use:
-	print("Error: Web forward port {} is in use by another user on this machine, or otherwise unavailable. "
-	      "Specify a different port with --webport or -w.".format(web_port))
-if local_port_in_use or web_port_in_use:
-	err("\nEach user must choose their own unique local ports when running on a shared machine (e.g. a departmental "
+	err("Error: Local port {} is in use by another user on this machine, or otherwise unavailable. "
+	    "Specify a different port with --localport or -l.\n"
+	    "\nEach user must choose their own unique local port when running on a shared machine (e.g. a departmental "
 	    "server).\nSee the section on 'Using the VLAB on a Shared Machine' at "
-	    "https://wiki.york.ac.uk/display/RTS/The+VLAB+Quickstart+Guide for more information.")
+	    "https://wiki.york.ac.uk/display/RTS/The+VLAB+Quickstart+Guide for more information.".format(local_port))
 
 # First get a port to use on the relay server
 if parsed.user is not None:
@@ -200,31 +186,17 @@ else:
 	relay_command = "{}:{}".format(parsed.board[0], ephemeral_port)
 
 
-if web_port != None:
-	ssh_cmd = "ssh -L {}:localhost:9001 -L {}:localhost:{} -o PasswordAuthentication=no -o ExitOnForwardFailure=yes " \
-	          "-e none -i {} {} -p {} -tt {} {}"\
-		.format(
-		        web_port,
-		        local_port,
-		        ephemeral_port,
-		        parsed.key[0],
-		        ssh_user,
-		        parsed.port[0],
-		        parsed.relay[0],
-		        relay_command
-		)
-else:
-	ssh_cmd = "ssh -L {}:localhost:{} -o PasswordAuthentication=no -o ExitOnForwardFailure=yes " \
-	          "-e none -i {} {} -p {} -tt {} {}"\
-		.format(
-		        local_port,
-		        ephemeral_port,
-		        parsed.key[0],
-		        ssh_user,
-		        parsed.port[0],
-		        parsed.relay[0],
-		        relay_command
-		)
+ssh_cmd = "ssh -L {}:localhost:{} -o PasswordAuthentication=no -o ExitOnForwardFailure=yes " \
+          "-e none -i {} {} -p {} -tt {} {}"\
+	.format(
+	        local_port,
+	        ephemeral_port,
+	        parsed.key[0],
+	        ssh_user,
+	        parsed.port[0],
+	        parsed.relay[0],
+	        relay_command
+	)
 
 if parsed.verbose:
 	print("Second ssh command: {}".format(ssh_cmd))
