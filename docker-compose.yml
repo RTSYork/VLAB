@@ -21,3 +21,19 @@ services:
       - "pegasus:host-gateway"
     environment:
       - TZ=Europe/London
+
+  web:
+    build: ./web
+    image: vlab/web
+    ports:
+      - "9000:5000"
+    volumes:
+      - "./log:/vlab/log/:ro"
+      - "./vlab.conf:/vlab/vlab.conf:ro"
+    extra_hosts:
+      - "pegasus:host-gateway"
+    environment:
+      - TZ=Europe/London
+      - REDIS_HOST=relay
+    depends_on:
+      - relay

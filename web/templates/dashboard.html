@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VLAB Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+    <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+    <style>
+        body { font-family: 'Inter', system-ui, -apple-system, sans-serif; }
+        .pulse-dot { animation: pulse 2s infinite; }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+
+    <!-- Header -->
+    <header class="bg-white border-b border-gray-200 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="bg-indigo-600 text-white font-bold px-3 py-1.5 rounded-lg text-lg tracking-wide">VLAB</div>
+                <h1 class="text-xl font-semibold text-gray-800">Dashboard</h1>
+            </div>
+            <div class="flex items-center gap-2 text-sm text-gray-500">
+                <span class="pulse-dot inline-block w-2 h-2 rounded-full bg-green-500"></span>
+                <span id="refresh-indicator">Auto-refresh active</span>
+                <span id="last-update" class="ml-2 text-gray-400"></span>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 py-6 space-y-6">
+
+        <!-- Summary Cards -->
+        <div id="summary-cards" class="grid grid-cols-2 md:grid-cols-5 gap-4">
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+                <div class="text-sm font-medium text-gray-500">Total Boards</div>
+                <div id="card-total" class="text-3xl font-bold text-gray-900 mt-1">-</div>
+            </div>
+            <div class="bg-white rounded-xl shadow-sm border border-green-200 p-5">
+                <div class="text-sm font-medium text-green-600">Available</div>
+                <div id="card-available" class="text-3xl font-bold text-green-700 mt-1">-</div>
+            </div>
+            <div class="bg-white rounded-xl shadow-sm border border-red-200 p-5">
+                <div class="text-sm font-medium text-red-600">In Use (Locked)</div>
+                <div id="card-locked" class="text-3xl font-bold text-red-700 mt-1">-</div>
+            </div>
+            <div class="bg-white rounded-xl shadow-sm border border-amber-200 p-5">
+                <div class="text-sm font-medium text-amber-600">In Use (Unlocked)</div>
+                <div id="card-unlocked" class="text-3xl font-bold text-amber-700 mt-1">-</div>
+            </div>
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+                <div class="text-sm font-medium text-gray-500">Denials Today</div>
+                <div id="card-denials" class="text-3xl font-bold text-gray-900 mt-1">-</div>
+            </div>
+        </div>
+
+        <!-- Redis connection error banner (hidden by default) -->
+        <div id="redis-error" class="hidden bg-red-50 border border-red-200 rounded-xl p-4 text-red-700 text-sm">
+            Cannot connect to Redis. Live board data is unavailable.
+        </div>
+
+        <!-- Board Status Table -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200">
+            <div class="px-5 py-4 border-b border-gray-200 flex items-center justify-between">
+                <h2 class="text-lg font-semibold text-gray-800">Live Board Status</h2>
+                <span class="text-xs text-gray-400">Updates every 10s</span>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="bg-gray-50 text-left text-gray-500 text-xs uppercase tracking-wider">
+                            <th class="px-5 py-3">Board Class</th>
+                            <th class="px-5 py-3">Serial</th>
+                            <th class="px-5 py-3">Server</th>
+                            <th class="px-5 py-3">Status</th>
+                            <th class="px-5 py-3">User</th>
+                            <th class="px-5 py-3">Duration</th>
+                        </tr>
+                    </thead>
+                    <tbody id="board-table-body">
+                        <tr><td colspan="6" class="px-5 py-8 text-center text-gray-400">Loading...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Charts Row -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- Hourly Usage Chart -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+                <h2 class="text-lg font-semibold text-gray-800 mb-4">Usage Over Time (Last 7 Days)</h2>
+                <div class="relative" style="height: 280px;">
+                    <canvas id="hourly-chart"></canvas>
+                </div>
+            </div>
+
+            <!-- Per-Boardclass Summary -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+                <h2 class="text-lg font-semibold text-gray-800 mb-4">Board Classes</h2>
+                <div id="boardclass-summary" class="space-y-3">
+                    <div class="text-gray-400 text-sm">Loading...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- User Stats Table -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200">
+            <div class="px-5 py-4 border-b border-gray-200">
+                <h2 class="text-lg font-semibold text-gray-800">User Statistics</h2>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="bg-gray-50 text-left text-gray-500 text-xs uppercase tracking-wider">
+                            <th class="px-5 py-3">User</th>
+                            <th class="px-5 py-3">Sessions</th>
+                            <th class="px-5 py-3">Total Time</th>
+                            <th class="px-5 py-3">Avg Session</th>
+                        </tr>
+                    </thead>
+                    <tbody id="user-table-body">
+                        <tr><td colspan="4" class="px-5 py-8 text-center text-gray-400">Loading...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Recent Denials -->
+        <div id="denials-section" class="hidden bg-white rounded-xl shadow-sm border border-gray-200">
+            <div class="px-5 py-4 border-b border-gray-200">
+                <h2 class="text-lg font-semibold text-gray-800">Recent Denial Events</h2>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="bg-gray-50 text-left text-gray-500 text-xs uppercase tracking-wider">
+                            <th class="px-5 py-3">Timestamp</th>
+                            <th class="px-5 py-3">User</th>
+                            <th class="px-5 py-3">Board Class</th>
+                        </tr>
+                    </thead>
+                    <tbody id="denials-table-body"></tbody>
+                </table>
+            </div>
+        </div>
+
+    </main>
+
+    <footer class="max-w-7xl mx-auto px-4 py-6 text-center text-xs text-gray-400">
+        VLAB Dashboard
+    </footer>
+
+    <script src="{{ url_for('static', filename='dashboard.js') }}"></script>
+</body>
+</html>
