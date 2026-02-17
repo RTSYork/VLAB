@@ -133,3 +133,6 @@ Temporary Items
 
 # Ignore any keys that might have ended up in here
 *.vlabkey
+
+# Agent stuff
+CLAUDE.md
