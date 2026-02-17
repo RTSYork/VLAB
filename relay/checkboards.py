@@ -74,6 +74,11 @@ def check_sessions(db):
 		for b in db.smembers("vlab:boardclass:{}:boards".format(bc)):
 			log("\tBoard: {}".format(b), True)
 
+			# Skip boards currently under hardware test
+			if db.get("vlab:board:{}:hwtest:testing".format(b)) is not None:
+				log("\t\tBoard under hardware test, skipping", True)
+				continue
+
 			bd = get_board_details(db, b, ["server", "port"])
 			server = bd["server"]
 			port = bd["port"]
@@ -88,18 +93,22 @@ def check_sessions(db):
 				session_ping_time = db.get("vlab:board:{}:session:pingtime".format(b))
 
 				if session_username is None or session_start_time is None or session_ping_time is None:
-					# Board is not marked as available, but also does not have a valid session
-					log("Board {} marked as in-use but has no session info. Setting as available.".format(b), False)
-					reset_board(db, b, server, port)
-					# Restart the board server container to ensure any sessions are killed
-					target = "vlab@{}".format(server)
-					keyfile = "{}{}".format(KEYS_DIR, "id_rsa")
-					cmd = "/opt/VLAB/boardrestart.sh {}".format(b)
-					ssh_cmd = "ssh -q -o \"StrictHostKeyChecking no\" -e none -i {} {} \"{}\"".format(keyfile, target, cmd)
-					print("Restarting target container...")
-					os.system(ssh_cmd)
-					unlock_board(db, b, bc)
-					end_session(db, b, bc)
+					# Don't recover boards that failed hardware test
+					if db.get("vlab:board:{}:hwtest:status".format(b)) == "fail":
+						log("\t\tBoard {} failed hardware test, not recovering to available pool".format(b), True)
+					else:
+						# Board is not marked as available, but also does not have a valid session
+						log("Board {} marked as in-use but has no session info. Setting as available.".format(b), False)
+						reset_board(db, b, server, port)
+						# Restart the board server container to ensure any sessions are killed
+						target = "vlab@{}".format(server)
+						keyfile = "{}{}".format(KEYS_DIR, "id_rsa")
+						cmd = "/opt/VLAB/boardrestart.sh {}".format(b)
+						ssh_cmd = "ssh -q -o \"StrictHostKeyChecking no\" -e none -i {} {} \"{}\"".format(keyfile, target, cmd)
+						print("Restarting target container...")
+						os.system(ssh_cmd)
+						unlock_board(db, b, bc)
+						end_session(db, b, bc)
 				else:
 					# Check if session is still active
 					log("\t\tIn use by {} since {} (last ping at {})."
@@ -119,10 +128,14 @@ def check_sessions(db):
 				lock_time = db.get("vlab:board:{}:lock:time".format(b))
 
 				if lock_username is None or lock_time is None:
-					# Board is not marked as unlocked, but also does not have a valid lock
-					log("Board {} marked as locked but has no lock info. Setting as unlocked.".format(b), False)
-					reset_board(db, b, server, port)
-					unlock_board(db, b, bc)
+					# Don't recover boards that failed hardware test
+					if db.get("vlab:board:{}:hwtest:status".format(b)) == "fail":
+						log("\t\tBoard {} failed hardware test, not recovering to unlocked pool".format(b), True)
+					else:
+						# Board is not marked as unlocked, but also does not have a valid lock
+						log("Board {} marked as locked but has no lock info. Setting as unlocked.".format(b), False)
+						reset_board(db, b, server, port)
+						unlock_board(db, b, bc)
 				else:
 					# Check if lock is still active
 					log("\t\tLocked by {} at {} until {}.".format(lock_username, lock_time, int(lock_time) + MAX_LOCK_TIME), True)
@@ -169,4 +182,14 @@ if parsed.check_locks:
 
 if parsed.ssh_to_boards:
 	log("Checking SSH connections", True)
+
+# Check for a dashboard-triggered test run
+if redis_db.get("vlab:hwtest:trigger"):
+	redis_db.delete("vlab:hwtest:trigger")
+	if redis_db.get("vlab:hwtest:running"):
+		log("HW test trigger received but test already running, ignoring", False)
+	else:
+		log("HW test trigger received, spawning testboards.py", False)
+		import subprocess
+		subprocess.Popen(["python3", "/vlab/testboards.py"])
 	check_ssh_to_boards(redis_db)

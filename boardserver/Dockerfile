@@ -37,6 +37,7 @@ ADD supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 ADD *.py /vlab/
 ADD *.tcl /vlab/
 ADD reset.bin /vlab/
+ADD test/ /vlab/test/
 
 EXPOSE 22 
 

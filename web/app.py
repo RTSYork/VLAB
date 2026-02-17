@@ -6,7 +6,7 @@ VLAB Web Dashboard — Flask application.
 
 import time
 
-from flask import Flask, jsonify, render_template
+from flask import Flask, jsonify, render_template, request
 
 import logparser
 import redis_queries
@@ -27,10 +27,13 @@ def api_boards():
 
     # Flatten summary for the dashboard
     totals = {'total': 0, 'available': 0, 'in_use': 0,
-              'in_use_locked': 0, 'in_use_unlocked': 0}
+              'in_use_locked': 0, 'in_use_unlocked': 0, 'hwtest_failed': 0}
     for bc, counts in summary.items():
         for k in totals:
             totals[k] += counts.get(k, 0)
+
+    hwtest_running = db.get('vlab:hwtest:running') is not None if db else False
+    hwtest_trigger = db.get('vlab:hwtest:trigger') is not None if db else False
 
     return jsonify({
         'boards': boards,
@@ -38,7 +41,20 @@ def api_boards():
         'totals': totals,
         'timestamp': int(time.time()),
         'redis_ok': db is not None,
+        'hwtest_running': hwtest_running,
+        'hwtest_trigger': hwtest_trigger,
     })
+
+
+@app.route('/api/hwtest/trigger', methods=['POST'])
+def api_hwtest_trigger():
+    db = redis_queries.connect()
+    if db is None:
+        return jsonify({'ok': False, 'error': 'Redis unavailable'}), 503
+    if db.get('vlab:hwtest:running'):
+        return jsonify({'ok': False, 'error': 'Test already running'}), 409
+    db.set('vlab:hwtest:trigger', '1', ex=300)
+    return jsonify({'ok': True})
 
 
 @app.route('/api/stats/summary')

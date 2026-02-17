@@ -27,6 +27,8 @@ def build_arg_parsers():
 	subparsers.add_parser('list', help='If the relay is running, list the currently available boards.')
 	subparsers.add_parser('status', help='Displays current status of the VLAB and available boards.')
 	subparsers.add_parser('stats', help='If the relay is running, parse the access log and display usage stats.')
+	subparsers.add_parser('hwtest', help='Trigger a hardware test run on all idle boards.')
+	subparsers.add_parser('hwteststate', help='Report whether a hardware test is queued or running.')
 
 	start_parser = subparsers.add_parser('start', help='Restart the VLAB relay')
 	start_parser.add_argument('-p', '--port', nargs=1, default=["2222"],
@@ -50,16 +52,16 @@ def build_docker_image(image_name):
 		Returns the base name of the archive, without path or file extensions
 		Errors if there is not exactly one suitable archive.
 		"""
-		res = glob.glob('./boardserver/Vivado_Lab_Lin*')
+		res = glob.glob('./boardserver/Vivado_Lab_Lin*.tar')
 		if len(res) < 1:
-			err("Download the Vivado Lab Solutions tar.gz and place it in the ./boardserver folder before building "
+			err("Download the Vivado Lab Solutions .tar and place it in the ./boardserver folder before building "
 			    "this image.")
 		if len(res) > 1:
 			err("There are multiple versions of the Vivado_Lab_Lin in the ./boardserver folder. Select only one.")
 		name = os.path.basename(res[0])
-		if not name.endswith(".tar.gz"):
-			err("Ensure that you downloaded the .tar.gz version of the Xilinx hardware server.")
-		basename = name[:-len(".tar.gz")]
+		if not name.endswith(".tar"):
+			err("Ensure that you have the .tar version of the Xilinx hardware server in ./boardserver/.")
+		basename = name[:-len(".tar")]
 		return basename
 
 	if image_name == "boardserver":
@@ -153,6 +155,37 @@ def main():
 
 	elif args.mode == "stats":
 		os.system("docker exec vlab-relay-1 python3 /vlab/logparse.py")
+
+	elif args.mode == "hwtest":
+		result = subprocess.run(
+			['docker', 'exec', 'vlab-relay-1', 'python3', '-c',
+			 'import redis; r=redis.Redis(decode_responses=True); '
+			 'print(r.get("vlab:hwtest:running"))'],
+			stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+		if result.stdout.decode().strip() != 'None':
+			print("A hardware test is already running.")
+		else:
+			subprocess.run(['docker', 'exec', 'vlab-relay-1', 'python3', '-c',
+			                'import redis; r=redis.Redis(decode_responses=True); '
+			                'r.set("vlab:hwtest:trigger", "1", ex=300)'])
+			print("Hardware test queued. It will start within 1 minute.")
+
+	elif args.mode == "hwteststate":
+		result = subprocess.run(
+			['docker', 'exec', 'vlab-relay-1', 'python3', '-c',
+			 'import redis; r=redis.Redis(decode_responses=True); '
+			 'print("running:", r.get("vlab:hwtest:running")); '
+			 'print("trigger:", r.get("vlab:hwtest:trigger"))'],
+			stdout=subprocess.PIPE)
+		running, trigger = result.stdout.decode().strip().splitlines()
+		running_val = running.split(": ", 1)[1]
+		trigger_val = trigger.split(": ", 1)[1]
+		if running_val != 'None':
+			print("Hardware test is currently RUNNING.")
+		elif trigger_val != 'None':
+			print("Hardware test is QUEUED (will start within 1 minute).")
+		else:
+			print("No hardware test running or queued.")
 
 	else:
 		main_parser.print_usage()

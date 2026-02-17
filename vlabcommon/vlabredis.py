@@ -139,6 +139,10 @@ def remove_board(db, b):
 	db.delete("vlab:board:{}:session:username".format(b))
 	db.delete("vlab:board:{}:session:starttime".format(b))
 	db.delete("vlab:board:{}:session:pingtime".format(b))
+	db.delete("vlab:board:{}:hwtest:status".format(b))
+	db.delete("vlab:board:{}:hwtest:time".format(b))
+	db.delete("vlab:board:{}:hwtest:message".format(b))
+	db.delete("vlab:board:{}:hwtest:testing".format(b))
 
 
 def _zpopmin(db, zset):

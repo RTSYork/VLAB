@@ -9,7 +9,7 @@ if [[ -d "$DIR" ]]; then
 	for f in $DIR/*
 	do
 		serial=$(basename $f)
-		running=$(docker inspect -f {{.State.Running}} cnt-$serial)
+		running=$(docker inspect -f {{.State.Running}} cnt-$serial 2>/dev/null)
 
 		# Check for and remove broken symlinks
 		if [[ -L "$f/tty" ]] && [[ ! -a "$f/tty" ]]; then

@@ -51,6 +51,9 @@ def get_board_status(db):
                 'start_time': '',
                 'lock_time': '',
                 'duration_s': 0,
+                'hwtest_status': db.get('vlab:board:{}:hwtest:status'.format(serial)) or '',
+                'hwtest_time': db.get('vlab:board:{}:hwtest:time'.format(serial)) or '',
+                'hwtest_message': db.get('vlab:board:{}:hwtest:message'.format(serial)) or '',
             }
 
             available_since = db.zscore(
@@ -88,8 +91,11 @@ def get_board_status(db):
                 else:
                     board['status'] = 'in_use_locked'
             else:
-                # No session, not available — stale state
-                board['status'] = 'available'
+                # No session, not available — check if hwtest failed
+                if board['hwtest_status'] == 'fail':
+                    board['status'] = 'hwtest_failed'
+                else:
+                    board['status'] = 'available'
 
             boards.append(board)
 
@@ -114,12 +120,21 @@ def get_summary(db):
         in_use_unlocked = min(unlocked, in_use)
         in_use_locked = in_use - in_use_unlocked
 
+        # Count boards that failed hardware test
+        hwtest_failed = 0
+        for serial in db.smembers('vlab:boardclass:{}:boards'.format(bc)):
+            if db.get('vlab:board:{}:hwtest:status'.format(serial)) == 'fail':
+                # Only count if not in available pool (truly withdrawn)
+                if db.zscore('vlab:boardclass:{}:availableboards'.format(bc), serial) is None:
+                    hwtest_failed += 1
+
         summary[bc] = {
             'total': total,
             'available': available,
             'in_use': in_use,
             'in_use_locked': in_use_locked,
             'in_use_unlocked': in_use_unlocked,
+            'hwtest_failed': hwtest_failed,
         }
 
     return summary

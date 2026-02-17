@@ -32,17 +32,34 @@
             'available': 'bg-green-100 text-green-800',
             'in_use_locked': 'bg-red-100 text-red-800',
             'in_use_unlocked': 'bg-amber-100 text-amber-800',
+            'hwtest_failed': 'bg-purple-100 text-purple-800',
             'unknown': 'bg-gray-100 text-gray-800'
         };
         var labels = {
             'available': 'Available',
             'in_use_locked': 'In Use (Locked)',
             'in_use_unlocked': 'In Use (Unlocked)',
+            'hwtest_failed': 'HW Test Failed',
             'unknown': 'Unknown'
         };
         var cls = classes[status] || classes['unknown'];
         var label = labels[status] || status;
         return '<span class="inline-block px-2.5 py-0.5 rounded-full text-xs font-medium ' + cls + '">' + label + '</span>';
+    }
+
+    function hwtestBadge(board) {
+        var st = board.hwtest_status;
+        if (!st) {
+            return '<span class="inline-block px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-500">Untested</span>';
+        }
+        var ts = board.hwtest_time ? formatTime(Number(board.hwtest_time)) : '';
+        if (st === 'pass') {
+            return '<span class="inline-block px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">Pass</span>' +
+                (ts ? '<span class="text-xs text-gray-400 ml-1">' + ts + '</span>' : '');
+        }
+        var msg = board.hwtest_message ? escapeHtml(board.hwtest_message) : 'Hardware test failed';
+        return '<span class="inline-block px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800" title="' + msg + '">Fail</span>' +
+            (ts ? '<span class="text-xs text-gray-400 ml-1">' + ts + '</span>' : '');
     }
 
     function escapeHtml(s) {
@@ -61,11 +78,47 @@
                 updateBoardTable(data.boards);
                 updateBoardclassSummary(data.summary);
                 updateRedisStatus(data.redis_ok);
+                updateHwtestButton(data.hwtest_running, data.hwtest_trigger);
                 document.getElementById('last-update').textContent =
                     'Updated ' + new Date().toLocaleTimeString();
             })
             .catch(function () {
                 updateRedisStatus(false);
+            });
+    }
+
+    function updateHwtestButton(running, trigger) {
+        var btn = document.getElementById('hwtest-btn');
+        if (!btn) return;
+        if (running) {
+            btn.textContent = 'Testing...';
+            btn.disabled = true;
+        } else if (trigger) {
+            btn.textContent = 'Queued...';
+            btn.disabled = true;
+        } else {
+            btn.textContent = 'Run HW Test';
+            btn.disabled = false;
+        }
+    }
+
+    function triggerHwTest() {
+        var btn = document.getElementById('hwtest-btn');
+        btn.disabled = true;
+        btn.textContent = 'Queuing...';
+        fetch('/api/hwtest/trigger', { method: 'POST' })
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                if (data.ok) {
+                    btn.textContent = 'Queued...';
+                } else {
+                    btn.textContent = data.error || 'Error';
+                    setTimeout(function () { btn.disabled = false; btn.textContent = 'Run HW Test'; }, 3000);
+                }
+            })
+            .catch(function () {
+                btn.disabled = false;
+                btn.textContent = 'Run HW Test';
             });
     }
 
@@ -75,6 +128,7 @@
         document.getElementById('card-available').textContent = totals.available;
         document.getElementById('card-locked').textContent = totals.in_use_locked;
         document.getElementById('card-unlocked').textContent = totals.in_use_unlocked;
+        document.getElementById('card-hwtest-failed').textContent = totals.hwtest_failed || 0;
     }
 
     function updateRedisStatus(ok) {
@@ -89,14 +143,15 @@
     function updateBoardTable(boards) {
         var tbody = document.getElementById('board-table-body');
         if (!boards || boards.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="6" class="px-5 py-8 text-center text-gray-400">No boards registered</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="7" class="px-5 py-8 text-center text-gray-400">No boards registered</td></tr>';
             return;
         }
         var html = '';
         for (var i = 0; i < boards.length; i++) {
             var b = boards[i];
             var rowClass = '';
-            if (b.status === 'available') rowClass = 'bg-green-50/50';
+            if (b.status === 'hwtest_failed') rowClass = 'bg-purple-50/30';
+            else if (b.status === 'available') rowClass = 'bg-green-50/50';
             else if (b.status === 'in_use_locked') rowClass = 'bg-red-50/30';
             else if (b.status === 'in_use_unlocked') rowClass = 'bg-amber-50/30';
 
@@ -105,8 +160,9 @@
             html += '<td class="px-5 py-3 font-mono text-xs text-gray-600">' + escapeHtml(b.serial) + '</td>';
             html += '<td class="px-5 py-3 text-gray-600">' + escapeHtml(b.server) + ':' + escapeHtml(b.port) + '</td>';
             html += '<td class="px-5 py-3">' + statusBadge(b.status) + '</td>';
+            html += '<td class="px-5 py-3">' + hwtestBadge(b) + '</td>';
             html += '<td class="px-5 py-3 text-gray-700">' + (b.user ? escapeHtml(b.user) : '-') + '</td>';
-            html += '<td class="px-5 py-3 text-gray-600">' + (b.status !== 'available' && b.duration_s ? formatDuration(b.duration_s) : '-') + '</td>';
+            html += '<td class="px-5 py-3 text-gray-600">' + (b.status !== 'available' && b.status !== 'hwtest_failed' && b.duration_s ? formatDuration(b.duration_s) : '-') + '</td>';
             html += '</tr>';
         }
         tbody.innerHTML = html;
@@ -137,6 +193,7 @@
             html += '<span class="text-green-600">' + s.available + ' available</span>';
             html += '<span class="text-red-600">' + s.in_use_locked + ' locked</span>';
             html += '<span class="text-amber-600">' + s.in_use_unlocked + ' unlocked</span>';
+            if (s.hwtest_failed) html += '<span class="text-purple-600">' + s.hwtest_failed + ' hw failed</span>';
             html += '</div>';
             html += '</div>';
         }
@@ -294,6 +351,7 @@
 
     // --- Initialization ---
 
+    document.getElementById('hwtest-btn').addEventListener('click', triggerHwTest);
     initChart();
     fetchBoards();
     fetchStats();
