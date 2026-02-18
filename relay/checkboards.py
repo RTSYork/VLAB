@@ -193,3 +193,10 @@ if redis_db.get("vlab:hwtest:trigger"):
 		import subprocess
 		subprocess.Popen(["python3", "/vlab/testboards.py"])
 	check_ssh_to_boards(redis_db)
+
+# Check for a config reload trigger
+if redis_db.get("vlab:config:reload"):
+	redis_db.delete("vlab:config:reload")
+	log("Config reload trigger received, re-running setupusers.py", False)
+	import subprocess
+	subprocess.Popen(["python3", "/vlab/setupusers.py"])

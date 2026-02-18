@@ -64,3 +64,27 @@ class TestWebDashboard:
         assert r.status_code == 200
         data = r.json()
         assert "denials" in data
+
+    def test_api_boards_includes_config_reload_pending(self, web_base_url):
+        r = requests.get(f"{web_base_url}/api/boards", timeout=10)
+        assert r.status_code == 200
+        data = r.json()
+        assert "config_reload_pending" in data, (
+            "Missing 'config_reload_pending' key in /api/boards — "
+            "live config reload feature may not be deployed"
+        )
+        assert isinstance(data["config_reload_pending"], bool)
+
+    def test_api_config_reload_returns_ok(self, web_base_url):
+        r = requests.post(f"{web_base_url}/api/config/reload", timeout=10)
+        assert r.status_code == 200
+        data = r.json()
+        assert data.get("ok") is True
+
+    def test_api_config_reload_sets_pending_flag(self, web_base_url):
+        """After posting to /api/config/reload, the boards API should reflect
+        config_reload_pending=True until checkboards.py consumes it."""
+        requests.post(f"{web_base_url}/api/config/reload", timeout=10)
+        r = requests.get(f"{web_base_url}/api/boards", timeout=10)
+        assert r.status_code == 200
+        assert r.json()["config_reload_pending"] is True

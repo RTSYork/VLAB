@@ -34,6 +34,7 @@ def api_boards():
 
     hwtest_running = db.get('vlab:hwtest:running') is not None if db else False
     hwtest_trigger = db.get('vlab:hwtest:trigger') is not None if db else False
+    config_reload_pending = db.get('vlab:config:reload') is not None if db else False
 
     return jsonify({
         'boards': boards,
@@ -43,6 +44,7 @@ def api_boards():
         'redis_ok': db is not None,
         'hwtest_running': hwtest_running,
         'hwtest_trigger': hwtest_trigger,
+        'config_reload_pending': config_reload_pending,
     })
 
 
@@ -54,6 +56,15 @@ def api_hwtest_trigger():
     if db.get('vlab:hwtest:running'):
         return jsonify({'ok': False, 'error': 'Test already running'}), 409
     db.set('vlab:hwtest:trigger', '1', ex=300)
+    return jsonify({'ok': True})
+
+
+@app.route('/api/config/reload', methods=['POST'])
+def api_config_reload():
+    db = redis_queries.connect()
+    if db is None:
+        return jsonify({'ok': False, 'error': 'Redis unavailable'}), 503
+    db.set('vlab:config:reload', '1', ex=120)
     return jsonify({'ok': True})
 
 

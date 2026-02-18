@@ -29,6 +29,7 @@ def build_arg_parsers():
 	subparsers.add_parser('stats', help='If the relay is running, parse the access log and display usage stats.')
 	subparsers.add_parser('hwtest', help='Trigger a hardware test run on all idle boards.')
 	subparsers.add_parser('hwteststate', help='Report whether a hardware test is queued or running.')
+	subparsers.add_parser('reloadconfig', help='Trigger a live reload of vlab.conf into Redis.')
 
 	start_parser = subparsers.add_parser('start', help='Restart the VLAB relay')
 	start_parser.add_argument('-p', '--port', nargs=1, default=["2222"],
@@ -186,6 +187,13 @@ def main():
 			print("Hardware test is QUEUED (will start within 1 minute).")
 		else:
 			print("No hardware test running or queued.")
+
+	elif args.mode == "reloadconfig":
+		subprocess.run(
+			['docker', 'exec', 'vlab-relay-1', 'python3', '-c',
+			 'import redis; r=redis.Redis(decode_responses=True); '
+			 'r.set("vlab:config:reload", "1", ex=120)'])
+		print("Config reload queued. It will apply within 1 minute.")
 
 	else:
 		main_parser.print_usage()

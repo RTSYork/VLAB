@@ -79,6 +79,7 @@
                 updateBoardclassSummary(data.summary);
                 updateRedisStatus(data.redis_ok);
                 updateHwtestButton(data.hwtest_running, data.hwtest_trigger);
+                updateReloadConfigButton(data.config_reload_pending);
                 document.getElementById('last-update').textContent =
                     'Updated ' + new Date().toLocaleTimeString();
             })
@@ -119,6 +120,38 @@
             .catch(function () {
                 btn.disabled = false;
                 btn.textContent = 'Run HW Test';
+            });
+    }
+
+    function updateReloadConfigButton(pending) {
+        var btn = document.getElementById('reloadconfig-btn');
+        if (!btn) return;
+        if (pending) {
+            btn.textContent = 'Reloading...';
+            btn.disabled = true;
+        } else {
+            btn.textContent = 'Reload Config';
+            btn.disabled = false;
+        }
+    }
+
+    function triggerConfigReload() {
+        var btn = document.getElementById('reloadconfig-btn');
+        btn.disabled = true;
+        btn.textContent = 'Queuing...';
+        fetch('/api/config/reload', { method: 'POST' })
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                if (data.ok) {
+                    btn.textContent = 'Reloading...';
+                } else {
+                    btn.textContent = data.error || 'Error';
+                    setTimeout(function () { btn.disabled = false; btn.textContent = 'Reload Config'; }, 3000);
+                }
+            })
+            .catch(function () {
+                btn.disabled = false;
+                btn.textContent = 'Reload Config';
             });
     }
 
@@ -351,6 +384,7 @@
 
     // --- Initialization ---
 
+    document.getElementById('reloadconfig-btn').addEventListener('click', triggerConfigReload);
     document.getElementById('hwtest-btn').addEventListener('click', triggerHwTest);
     initChart();
     fetchBoards();
