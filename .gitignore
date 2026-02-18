@@ -133,6 +133,11 @@ Temporary Items
 
 # Ignore any keys that might have ended up in here
 *.vlabkey
+/.ssh/
+/keys/
+/embs-status-repo/
+boardserver/*.tar
+boardserver/*.tar.gz
 
 # Agent stuff
 CLAUDE.md
