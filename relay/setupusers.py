@@ -74,11 +74,11 @@ try:
 		if os.path.isfile("/vlab/keys/{}.pub".format(user)):
 			log.info("\tProcessing user: {}".format(user))
 			# Check if system user already exists
-			result = subprocess.call(["id", user], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+			result = subprocess.call(["/usr/bin/id", user], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 			if result != 0:
 				try:
 					useradd_output = subprocess.check_output(
-						["useradd", "-m", "--shell", "/vlab/shell.py", "{}".format(user)])
+						["/usr/sbin/useradd", "-m", "--shell", "/vlab/shell.py", "{}".format(user)])
 				except subprocess.CalledProcessError as e:
 					log.critical("CalledProcessError calling useradd. Message: {}".format(e.output))
 					sys.exit(52)
