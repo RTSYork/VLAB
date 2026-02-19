@@ -136,6 +136,7 @@ Temporary Items
 /.ssh/
 /keys/
 /embs-status-repo/
+/vlab.conf
 boardserver/*.tar
 boardserver/*.tar.gz
 
