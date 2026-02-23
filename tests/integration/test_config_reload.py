@@ -7,6 +7,7 @@ import pytest
 
 @pytest.mark.integration
 @pytest.mark.live
+@pytest.mark.direct
 class TestConfigReloadTriggerKey:
     """The vlab:config:reload Redis key is the trigger mechanism for live reload."""
 
@@ -35,6 +36,7 @@ class TestConfigReloadTriggerKey:
 
 @pytest.mark.integration
 @pytest.mark.live
+@pytest.mark.direct
 class TestRedisStateAfterSetupusers:
     """Verify the Redis state is consistent with what idempotent setupusers.py produces."""
 

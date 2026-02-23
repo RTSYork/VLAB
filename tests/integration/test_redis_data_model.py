@@ -9,6 +9,7 @@ from vlabredis import MAX_LOCK_TIME
 
 @pytest.mark.integration
 @pytest.mark.live
+@pytest.mark.direct
 class TestBoardMetadata:
     def test_registered_boards_have_server_and_port(self, live_redis):
         for bc in live_redis.smembers("vlab:boardclasses"):
@@ -39,6 +40,7 @@ class TestBoardMetadata:
 
 @pytest.mark.integration
 @pytest.mark.live
+@pytest.mark.direct
 class TestSessionInvariants:
     def test_available_boards_have_no_session(self, live_redis):
         for bc in live_redis.smembers("vlab:boardclasses"):

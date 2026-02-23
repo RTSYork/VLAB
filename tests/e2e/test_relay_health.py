@@ -15,6 +15,7 @@ def _tcp_connect(host, port, timeout=5):
 
 @pytest.mark.e2e
 @pytest.mark.live
+@pytest.mark.direct
 class TestRelayHealth:
     def test_ssh_port_accepts_connection(self, pegasus_host, ssh_port):
         s = _tcp_connect(pegasus_host, ssh_port)

@@ -7,6 +7,7 @@ import pytest
 
 @pytest.mark.e2e
 @pytest.mark.live
+@pytest.mark.direct
 class TestBoardConnectivity:
     def test_at_least_one_board_registered(self, live_redis):
         total = 0

@@ -5,6 +5,7 @@ import pytest
 
 @pytest.mark.integration
 @pytest.mark.live
+@pytest.mark.direct
 class TestRedisConnection:
     def test_ping(self, live_redis):
         assert live_redis.ping() is True

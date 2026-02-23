@@ -2,7 +2,7 @@
 
 ## Purpose of the VLAB
 
-The Virtual Lab (VLAB) is designed to allow a team of people to share remote access to individual [FPGA](https://en.wikipedia.org/wiki/Field-programmable_gate_array) development boards. The VLAB provides user access control, mutual exclusion, load balancing, statistics, and logging. 
+The Virtual Lab (VLAB) is designed to allow a team of people to share remote access to individual [FPGA](https://en.wikipedia.org/wiki/Field-programmable_gate_array) development boards. The VLAB provides user access control, mutual exclusion, load balancing, statistics, and logging.
 
 The VLAB was developed to support two main use cases:
 * To allow a development team to share access to a small number of expensive development boards. Also this has the benefit that these boards can be safely in a server room instead of on someone's desk.
@@ -16,13 +16,13 @@ The VLAB is structured as follows:
 
 ![Overview of the VLAB](images/overview.png)
 
-The main entry point for clients is the _relay_ server. The client software connects to the relay (using `ssh`) and requests access to an FPGA board of a given type. The relay authenticates the user, and if they are allowed to access the board type that they have requested, a free FPGA board of the requested type is selected and the user is forwarded on to the _boardserver_ responsible for serving it. 
+The main entry point for clients is the _relay_ server. The client software connects to the relay (using `ssh`) and requests access to an FPGA board of a given type. The relay authenticates the user, and if they are allowed to access the board type that they have requested, a free FPGA board of the requested type is selected and the user is forwarded on to the _boardserver_ responsible for serving it.
 
 The VLAB makes use of [Docker](https://www.docker.com) and consists of three Docker images:
 
 * Relay - the main entrypoint to the VLAB.
 * Boardserver - a boardserver container is created for each hosted FPGA, and is responsible for actually serving the FPGA.
-* Web - provides statistics tracking in a handy web interface.
+* Web - provides a web dashboard for monitoring and administration.
 
 These containers can be hosted on any physical server, and may be all the same server in small deployments.
 
@@ -32,7 +32,7 @@ These containers can be hosted on any physical server, and may be all the same s
 
 ## Client Installation and Use
 
-The client script (`vlab.py`) can be downloaded directly from [GitHub](https://raw.githubusercontent.com/RTSYork/VLAB/master/vlab.py). It has no external dependencies, apart from [Python 3](https://www.python.org/downloads/) itself. 
+The client script (`vlab.py`) can be downloaded directly from [GitHub](https://raw.githubusercontent.com/RTSYork/VLAB/master/vlab.py). It has no external dependencies, apart from [Python 3](https://www.python.org/downloads/) itself.
 
 To use the client you must have a keyfile which should have been sent to the client by the VLAB administrator. Connect to the VLAB using:
 
@@ -52,7 +52,23 @@ Local port `12345` will be connected to the remote hardware server for that boar
 The terminal uses [GNU screen](https://www.gnu.org/software/screen/) so to disconnect press and release Ctrl-A, then press Ctrl-K.
 
 By default, the relay server will allocate boards using a *least-recently-unlocked* scheme to balance load, i.e. whichever board has the oldest unlock time will be preferred.
-Boards that have been attached to the system but never allocated to a user will be used preferentially over those that have previously been used. 
+Boards that have been attached to the system but never allocated to a user will be used preferentially over those that have previously been used.
+
+
+## Web Dashboard
+
+The VLAB includes a web dashboard (port 9000 by default) that provides real-time monitoring and administration. The dashboard includes:
+
+* **Board Status** - A live table showing all boards with their class, serial number, server, availability status, hardware test results, current user, and session duration.
+* **Summary** - At-a-glance counts of total, available, in-use, and hardware-test-failed boards, plus access denials today.
+* **Utilisation** - Per-board-class utilisation bars showing current load.
+* **Usage History** - An hourly usage chart covering the last 7 days.
+* **User Statistics** - Per-user session counts, total usage time, and average session duration.
+* **Denial Log** - Recent access denials showing which users were denied access to which board classes.
+* **Hardware Test** - A button to trigger an on-demand hardware test of all idle boards.
+* **Config Reload** - A button to trigger a live reload of user configuration without restarting containers.
+
+The dashboard auto-refreshes board status every 10 seconds and statistics every 60 seconds.
 
 
 ## Installation
@@ -79,7 +95,7 @@ This will construct a keypair which is used by the relay server to communicate w
 ./manage.py generatekeys --allnew
 ```
 
-This command creates a keypair for all users that are mentioned in `vlab.conf` and does not already have a key pair in the `/keys/` directory. These are stored as `/keys/$username` and `/keys/$username.pub` for the private and public keys respectively. The user needs the private key in order to use the VLAB. Should you need to recreate these, you can simply delete the pair and rerun `generatekeys --allnew`. 
+This command creates a keypair for all users that are mentioned in `vlab.conf` and does not already have a key pair in the `/keys/` directory. These are stored as `/keys/$username` and `/keys/$username.pub` for the private and public keys respectively. The user needs the private key in order to use the VLAB. Should you need to recreate these, you can simply delete the pair and rerun `generatekeys --allnew`.
 
 Before building the Docker containers, the Xilinx Hardware Server archive must be downloaded so it can be installed into the board server container.
 Download the [Vivado 64-bit Hardware Server for Linux](https://www.xilinx.com/support/download/index.html/content/xilinx/en/downloadNav/vivado-design-tools.html) for the edition of the Xilinx tools you are using (use the latest relevant version if using the VLAB with multiple Xilinx installs) and place the `Xilinx_HW_Server_Lin_xxxx.x_xxxx_xxxx.tar.gz` file in the boardserver folder within the VLAB repository.
@@ -130,6 +146,15 @@ This line says that port 22 in the container should be mapped to port 2222 on th
 ./vlab.py -r relayserver -p 2223 -k mykey.vlabkey -b zybo
 ```
 
+The following ports are exposed by default:
+
+| Port | Service |
+|------|---------|
+| 2222 | SSH relay (client connections) |
+| 6379 | Redis |
+| 9000 | Web dashboard |
+| 9001 | Supervisord |
+
 
 ### Board Host Installation
 
@@ -146,7 +171,7 @@ sudo apt install fxload libusb-dev python3-redis task-spooler
 
 #### Installation
 
-As described previously, board hosts are the servers to which the actual FPGA boards are connected. There can be multiple board hosts, and can be the same machine that the relay server is running. udev rules recognise when FPGAs are attached and instances of the `boardserver` container are launched to serve it. 
+As described previously, board hosts are the servers to which the actual FPGA boards are connected. There can be multiple board hosts, and can be the same machine that the relay server is running. udev rules recognise when FPGAs are attached and instances of the `boardserver` container are launched to serve it.
 
 To set up a board host, first create a `vlab` user on the which has access to the `docker` group.
 For example, on the new board host:
@@ -176,7 +201,7 @@ sudo mkdir -p /etc/hotplug/usb/
 cd digilent.adept.runtime_*/
 sudo ./install.sh silent=1
 cd ../digilent.adept.utilities_*/
-yes "" | sudo ./install.sh 
+yes "" | sudo ./install.sh
 ```
 
 This should add a utility called `dadutil` to your `$PATH` which can be used to enumerate Digilent boards connected to the board host.
@@ -192,7 +217,7 @@ sudo chown $USER:$USER /tools
 chmod +x Xilinx_SDK_2019.1_0524_1430_Lin64.bin
 ./Xilinx_SDK_2019.1_0524_1430_Lin64.bin -- -b AuthTokenGen
 ./Xilinx_SDK_2019.1_0524_1430_Lin64.bin -- -a XilinxEULA,3rdPartyEULA,WebTalkTerms -b Install -e "Xilinx\ Software\ Command-Line\ Tool\ \(XSCT\)"
-``` 
+```
 
 Then clone/download the `host` directory from this repository to the new board host, and run the `install.sh` script with the path to the installed Xilinx SDK tools.
 For example:
@@ -233,7 +258,7 @@ When a new FPGA board is connected to a board host the following takes place:
     - If not, the unknown device is rejected and logged.
     - If it is, the relay server informs `boardconnected.py` which type of device it is, and so which container should be launched to host it. Currently only one type of container is required, but more diverse boards may require other containers in the future.
 
-Upon board disconnection (according to udev), the board host will kill the associated board server container and deregister it from the relay server.  
+Upon board disconnection (according to udev), the board host will kill the associated board server container and deregister it from the relay server.
 
 Each supported FPGA must have a unique serial number, and that serial number must be readable by udev (and must match for both JTAG and TTY devices)
 It is sometimes the case that all FPGA development boards of the same type come from the factory with the same serial number, so a utility program may be required to set a unique serial number first.
@@ -256,11 +281,10 @@ The VLAB is configured by `vlab.conf`, which describes two things:
     * Users have an `overlord` flag, which if set means that they can access all boards on the VLAB.
     * Otherwise, users are given a list of the board classes which they are allowed to access. Users may only connect to board classes they are allowed to.
 
-`vlab.conf` is [volume mapped](https://docs.docker.com/engine/tutorials/dockervolumes/) into the `relay` container. After editing `vlab.conf` the `relay` container must be restarted with:
+`vlab.conf` is [volume mapped](https://docs.docker.com/engine/tutorials/dockervolumes/) into the `relay` container. After editing `vlab.conf`, changes can be applied in two ways:
 
-```
-./manage.py start
-```
+* **Live reload** (recommended for user/permission changes): Run `./manage.py reloadconfig` or press the "Reload Config" button on the web dashboard. The relay will pick up the changes within one minute without any downtime. This adds new users, removes deleted users, and updates permissions.
+* **Full restart**: Run `./manage.py start` to restart the relay container. This is required for changes to board definitions.
 
 `vlab.conf` is in JSON format. An example is shown below:
 
@@ -280,12 +304,59 @@ The VLAB is configured by `vlab.conf`, which describes two things:
 In this example there is one board with a serial number `exampleboardserialnumber` assigned to the boardclass `boardclass_a`. `"type"` in the board definition is a string used to tell the VLAB which drivers are required to interact with the board. Currently `"type"` is not used because all supported boards can be served from the same container.
 
 
+## Health Monitoring
+
+The relay container runs a health check process (`checkboards.py`) every minute via cron. This performs several automated maintenance tasks:
+
+* **Lock timeout enforcement** - If a board has been locked for longer than 1 hour (`MAX_LOCK_TIME`), it is forcibly unlocked and returned to the available pool.
+* **Session validation** - Active sessions are pinged to verify they are still alive. If a session does not respond within 30 seconds, the board is recovered.
+* **SSH connectivity checks** - The relay verifies that each registered boardserver container is reachable via SSH. Unreachable boardservers are removed.
+* **Half-locked state recovery** - Detects boards that are in an inconsistent state (e.g. locked but missing session information) and recovers them.
+* **Hardware test integration** - Detects hardware test triggers and spawns the test process. Boards currently under test are skipped during health checks.
+* **Config reload integration** - Detects configuration reload triggers and spawns the user setup process.
+
+
+## Hardware Testing
+
+The VLAB includes an automated hardware test system (`testboards.py`) that periodically verifies each FPGA board can be programmed and is functioning correctly.
+
+### How it works
+
+Every 4 hours (via cron), the test system iterates over all idle boards (those not currently in use by a student). For each board, it:
+
+1. Programs a known test bitstream and ELF binary onto the FPGA via xsdb.
+2. Reads the board's serial output, looking for the magic string `VLAB_TEST_OK`.
+3. If the expected output is received, the board passes. If not, the board is marked as failed.
+
+Failed boards are removed from both the `availableboards` and `unlockedboards` pools, so they will not be allocated to users. Failed boards are automatically re-tested every 4 hours and returned to the pools if they pass.
+
+### Triggering a test manually
+
+A hardware test can be triggered on-demand in two ways:
+
+```
+./manage.py hwtest
+```
+
+Or by pressing the "Hardware Test" button on the web dashboard.
+
+To check whether a test is currently running or queued:
+
+```
+./manage.py hwteststate
+```
+
+### Requirements
+
+The test bitstream and ELF files are baked into the boardserver Docker image (in `boardserver/test/`). Boards must have `"reset": "true"` set in `vlab.conf` so that they are reset to a clean state after testing.
+
+
 ## Resetting boards on disconnect
 When a user disconnects from an FPGA their design will remain active.
 The VLAB also supports shutting down a hosted FPGA when the user disconnects.
 This can be useful if, for example, the board is connected to an Ethernet network and so it is not desirable to have designs active when they are not being tested.
 
-Resetting the boards requires that the `boardserver` containers have access to the Xilinx command line tools, by installing them on each board host (see above). 
+Resetting the boards requires that the `boardserver` containers have access to the Xilinx command line tools, by installing them on each board host (see above).
 
 Once installed, create a symlink on the board host called `xsct` in `/opt/VLAB/` which points to the Xilinx SDK install folder.
 The board host install script will create this symlink automatically if the path to the Xilinx tools is is specified as an argument.
@@ -293,7 +364,7 @@ The board host install script will create this symlink automatically if the path
 To create this symlink this manually, run the following (change if your install paths or version are different):
 
 ```
-sudo ln -s /tools/Xilinx/SDK/2019.1 /opt/VLAB/xsct 
+sudo ln -s /tools/Xilinx/SDK/2019.1 /opt/VLAB/xsct
 ```
 
 
@@ -306,6 +377,47 @@ Then add `"reset: "true"` to the board definition in `vlab.conf`. For example
 ```
 
 Now when a user connects or disconnects from the defined board, a full system reset will be issued, and in the case of Zynq-based boards the ARM cores shut down.
+
+
+## Management Commands
+
+The `manage.py` script provides the following commands:
+
+| Command | Description |
+|---------|-------------|
+| `build [images...]` | Rebuild the VLAB Docker images. Optionally specify which images to build, or omit to build all. |
+| `start [-p PORT]` | Start (or restart) the VLAB relay. Optionally specify the SSH port (default 2222). |
+| `generatekeys` | Generate SSH keypairs. Use `--internal` for the relay-boardserver keypair, `--allnew` for all users missing keys, or `--user NAME` for a specific user. |
+| `status` | Display current status of the VLAB and all boards (lock state, sessions, availability). |
+| `list` | Quick listing of currently available boards. |
+| `stats` | Parse the access log and display usage statistics. |
+| `hwtest` | Trigger a hardware test run on all idle boards. |
+| `hwteststate` | Report whether a hardware test is queued or currently running. |
+| `reloadconfig` | Trigger a live reload of `vlab.conf` user/permission changes into the running relay. |
+
+
+## Testing
+
+The project includes a pytest-based test suite covering unit, integration, and end-to-end tests.
+
+```
+# Run unit tests (no network required)
+pytest -m unit
+
+# Run integration tests against a live deployment
+pytest -m integration --run-live
+
+# Run end-to-end tests with direct access
+pytest -m e2e --run-live --run-direct --pegasus-host=pegasus
+
+# Run SSH login tests (requires user credentials)
+pytest -m e2e --run-live --vlab-user=USERNAME --vlab-key=path/to/key
+```
+
+Test categories:
+* **unit** - Tests with mocked dependencies, no network required.
+* **integration** - Tests against a live Redis instance on the deployment server.
+* **e2e** - Full end-to-end tests against live services (SSH, HTTP, board connectivity).
 
 
 ## Common Issues

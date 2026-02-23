@@ -124,5 +124,11 @@ for board in config['boards'].keys():
 # Set the initial port counter only if it does not already exist (setnx is safe to call on reload)
 db.setnx("vlab:port", 30000)
 
+# Ensure access.log exists and is world-writable (shell.py runs as each student user)
+access_log = '/vlab/log/access.log'
+if not os.path.isfile(access_log):
+	open(access_log, 'a').close()
+os.chmod(access_log, 0o666)
+
 log.info("Relay server start up completed successfully.")
 sys.exit(0)

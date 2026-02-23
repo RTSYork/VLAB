@@ -8,6 +8,7 @@ import requests
 
 @pytest.mark.e2e
 @pytest.mark.live
+@pytest.mark.direct
 class TestWebDashboard:
     def test_index_returns_html(self, web_base_url):
         r = requests.get(f"{web_base_url}/", timeout=10)

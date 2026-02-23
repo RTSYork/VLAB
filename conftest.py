@@ -14,7 +14,13 @@ def pytest_addoption(parser):
         "--run-live",
         action="store_true",
         default=False,
-        help="Run integration/e2e tests that require network access to pegasus",
+        help="Run live tests that require SSH access to pegasus",
+    )
+    parser.addoption(
+        "--run-direct",
+        action="store_true",
+        default=False,
+        help="Run tests that require direct TCP/Redis/HTTP access to pegasus",
     )
     parser.addoption(
         "--pegasus-host",
@@ -39,6 +45,16 @@ def pytest_addoption(parser):
         type=int,
         help="Web dashboard port on pegasus (default: 9000)",
     )
+    parser.addoption(
+        "--vlab-user",
+        default=None,
+        help="VLAB username for SSH login tests (e.g. vqt501)",
+    )
+    parser.addoption(
+        "--vlab-key",
+        default=None,
+        help="Path to VLAB private key for SSH login tests (e.g. keys/vqt501.vlabkey)",
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -46,11 +62,16 @@ def pytest_addoption(parser):
 # ---------------------------------------------------------------------------
 
 def pytest_collection_modifyitems(config, items):
-    if config.getoption("--run-live"):
-        return
+    run_live = config.getoption("--run-live")
+    run_direct = config.getoption("--run-direct")
     skip_live = pytest.mark.skip(reason="need --run-live option to run")
+    skip_direct = pytest.mark.skip(reason="need --run-direct option to run")
     for item in items:
-        if "integration" in item.keywords or "e2e" in item.keywords or "live" in item.keywords:
+        is_live = "integration" in item.keywords or "e2e" in item.keywords or "live" in item.keywords
+        is_direct = "direct" in item.keywords
+        if is_direct and not run_direct:
+            item.add_marker(skip_direct)
+        elif is_live and not is_direct and not run_live:
             item.add_marker(skip_live)
 
 
@@ -184,3 +205,27 @@ def sample_config_dict():
             "BOARD002": {"class": "vlab_test", "type": "zybo-z7"},
         },
     }
+
+
+# ---------------------------------------------------------------------------
+# VLAB SSH login fixtures (for e2e login tests)
+# ---------------------------------------------------------------------------
+
+@pytest.fixture(scope="session")
+def vlab_user(request):
+    user = request.config.getoption("--vlab-user")
+    if user is None:
+        pytest.skip("need --vlab-user option for SSH login tests")
+    return user
+
+
+@pytest.fixture(scope="session")
+def vlab_key(request):
+    import os
+    key = request.config.getoption("--vlab-key")
+    if key is None:
+        pytest.skip("need --vlab-key option for SSH login tests")
+    key = os.path.expanduser(key)
+    if not os.path.isfile(key):
+        pytest.fail(f"VLAB key file not found: {key}")
+    return key
