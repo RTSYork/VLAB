@@ -125,8 +125,8 @@ After=docker.service
 
 [Service]
 Restart=always
-ExecStart=/usr/bin/docker-compose -f /opt/VLAB/docker-compose.yml up --force-recreate
-ExecStop=/usr/bin/docker-compose -f /opt/VLAB/docker-compose.yml stop
+ExecStart=/usr/bin/docker compose -f /opt/VLAB/docker-compose.yml up --force-recreate
+ExecStop=/usr/bin/docker compose -f /opt/VLAB/docker-compose.yml stop
 
 [Install]
 WantedBy=default.target
@@ -163,7 +163,7 @@ The following ports are exposed by default:
 As well as Docker, the board host server depends on Python 3 and the 'redis' package, and certain FPGA configurations require the fxload firmware downloader and libusb.
 Task Spooler (`tsp`) is also required for queueing requests to register and deregister boards with the relay server as they are connected and disconnected.
 
-From a standard Ubuntu Server 18.04 installation, these can be installed with:
+From a standard Ubuntu Server installation, these can be installed with:
 
 ```
 sudo apt install fxload libusb-dev python3-redis task-spooler
@@ -214,9 +214,9 @@ To install these tools from the command line (to `/tools/Xilinx`), run the follo
 ```
 sudo mkdir /tools
 sudo chown $USER:$USER /tools
-chmod +x Xilinx_SDK_2019.1_0524_1430_Lin64.bin
-./Xilinx_SDK_2019.1_0524_1430_Lin64.bin -- -b AuthTokenGen
-./Xilinx_SDK_2019.1_0524_1430_Lin64.bin -- -a XilinxEULA,3rdPartyEULA,WebTalkTerms -b Install -e "Xilinx\ Software\ Command-Line\ Tool\ \(XSCT\)"
+chmod +x Xilinx_SDK_xxxx.x_xxxx_xxxx_Lin64.bin
+./Xilinx_SDK_xxxx.x_xxxx_xxxx_Lin64.bin -- -b AuthTokenGen
+./Xilinx_SDK_xxxx.x_xxxx_xxxx_Lin64.bin -- -a XilinxEULA,3rdPartyEULA,WebTalkTerms -b Install -e "Xilinx\ Software\ Command-Line\ Tool\ \(XSCT\)"
 ```
 
 Then clone/download the `host` directory from this repository to the new board host, and run the `install.sh` script with the path to the installed Xilinx SDK tools.
@@ -224,7 +224,7 @@ For example:
 
 ```
 cd host
-sudo ./install.sh /tools/Xilinx/SDK/2019.1
+sudo ./install.sh /tools/Xilinx/SDK/<version>
 ```
 
 Once installed, edit `/opt/VLAB/boardhost.conf` to set the hostname/IP and port of the relay server.
@@ -364,7 +364,7 @@ The board host install script will create this symlink automatically if the path
 To create this symlink this manually, run the following (change if your install paths or version are different):
 
 ```
-sudo ln -s /tools/Xilinx/SDK/2019.1 /opt/VLAB/xsct
+sudo ln -s /tools/Xilinx/SDK/<version> /opt/VLAB/xsct
 ```
 
 
@@ -372,7 +372,7 @@ Then add `"reset: "true"` to the board definition in `vlab.conf`. For example
 
 ```
 "boards": {
-	"210279777433": {"class": "vlab_zybo", "type": "zybo", "reset": "true"}
+	"210279777433": {"class": "vlab_zybo-z7", "type": "zybo", "reset": "true"}
 }
 ```
 
