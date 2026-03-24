@@ -41,6 +41,42 @@ if arg == 'getport':
 	print("VLABPORT:{}".format(port))
 	sys.exit(0)
 
+# Is the user requesting a framebuffer capture?
+if arg == 'capture':
+	# Find the user's current board session
+	board = None
+	boardclass = None
+	for bc in db.smembers("vlab:boardclasses"):
+		for b in db.smembers("vlab:boardclass:{}:boards".format(bc)):
+			if db.get("vlab:board:{}:session:username".format(b)) == username:
+				board = b
+				boardclass = bc
+				break
+		if board:
+			break
+
+	if board is None:
+		print("You don't have an active board session. Connect with vlab.py first.")
+		sys.exit(1)
+
+	board_details = get_board_details(db, board, ["server", "port"])
+	server = board_details['server']
+	port = board_details['port']
+
+	keyfile = "{}{}".format(KEYS_DIR, "id_rsa")
+	target = "root@{}".format(server)
+
+	log.info("CAPTURE: {}, {}:{}".format(username, boardclass, board))
+	sys.stderr.write("Capturing framebuffer from board '{}'...\n".format(board))
+	sys.stderr.flush()
+
+	# Run capture on boardserver: xsdb output goes to stderr (visible to user), JPEG to stdout
+	cmd = "cd /tmp && /opt/xsct/bin/xsdb /vlab/capture_fast.tcl 1>&2 && cat output.jpg && rm -f output.jpg"
+	ssh_cmd = "ssh -q -o \"StrictHostKeyChecking no\" -i {} -p {} {} \"{}\"".format(
+		keyfile, port, target, cmd)
+	result = subprocess.run(ssh_cmd, shell=True)
+	sys.exit(result.returncode)
+
 # Otherwise the arg should be of the form boardclass:port, or boardclass:port:serial to request a specific board
 args = arg.split(":")
 if len(args) < 2:

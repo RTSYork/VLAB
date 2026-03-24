@@ -38,6 +38,7 @@ ADD *.py /vlab/
 ADD *.tcl /vlab/
 ADD reset.bin /vlab/
 ADD test/ /vlab/test/
+ADD capture_daemon/capture_daemon.elf /vlab/capture_daemon/
 
 EXPOSE 22 
 

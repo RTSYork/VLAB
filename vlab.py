@@ -19,6 +19,7 @@ import argparse
 import os
 import socket
 import sys
+import time
 import urllib.request
 import urllib.error
 from subprocess import Popen, PIPE
@@ -53,6 +54,10 @@ parser.add_argument('-s', '--serial', nargs=1,
                     help="Requested board serial number.")
 parser.add_argument('-v', '--verbose', default=False, action='store_true',
                     help="Enable verbose logging.")
+parser.add_argument('-c', '--capture', default=False, action='store_true',
+                    help="Capture the FPGA framebuffer and save as JPEG.")
+parser.add_argument('-o', '--output', nargs=1,
+                    help="Output filename for capture (default: capture_YYYYMMDD_HHMMSS.jpg)")
 parsed = parser.parse_args()
 
 error_info = "Read the instructions at\n" \
@@ -90,6 +95,43 @@ if not parsed.key:
 	err("Specify a keyfile with --key.")
 if not os.path.isfile(parsed.key[0]):
 	err("Keyfile {} does not exist. Specify a keyfile with --key.".format(parsed.key[0]))
+
+# Handle capture mode
+if parsed.capture:
+	ssh_cmd = ['ssh', '-oPasswordAuthentication=no', '-i', parsed.key[0],
+	           '-p', parsed.port[0]]
+	if parsed.user is not None:
+		ssh_cmd.extend(['-l', parsed.user[0]])
+	ssh_cmd.extend([parsed.relay[0], 'capture'])
+
+	if parsed.verbose:
+		print("Capture ssh command: {}".format(ssh_cmd))
+
+	print("Requesting framebuffer capture...")
+	proc = Popen(ssh_cmd, stdout=PIPE)
+	stdout, _ = proc.communicate()
+
+	if proc.returncode != 0 or len(stdout) == 0:
+		if len(stdout) > 0:
+			print(stdout.decode('utf-8', errors='replace').strip())
+		else:
+			print("Capture failed.")
+		sys.exit(1)
+
+	# Verify JPEG magic bytes
+	if len(stdout) < 2 or stdout[:2] != b'\xff\xd8':
+		print(stdout.decode('utf-8', errors='replace').strip())
+		sys.exit(1)
+
+	if parsed.output:
+		filename = parsed.output[0]
+	else:
+		filename = "capture_{}.jpg".format(time.strftime("%Y%m%d_%H%M%S"))
+
+	with open(filename, 'wb') as f:
+		f.write(stdout)
+	print("Saved to {} ({} bytes)".format(filename, len(stdout)))
+	sys.exit(0)
 
 # Check that the requested ports are free to use
 local_port = int(parsed.localport[0])
