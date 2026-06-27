@@ -14,6 +14,7 @@ Ian Gray, 2016
 import getpass
 import logging
 import os
+import re
 import subprocess
 from vlabredis import *
 
@@ -42,7 +43,19 @@ if arg == 'getport':
 	sys.exit(0)
 
 # Is the user requesting a framebuffer capture?
-if arg == 'capture':
+# The command is 'capture' or 'capture:<vdma_base>', where <vdma_base> overrides the
+# default VDMA base address used by capture_fast.tcl.
+if arg == 'capture' or arg.startswith('capture:'):
+	# Parse and strictly validate the optional VDMA base address. This value comes from
+	# the (untrusted) client and is interpolated into a shell command below, so anything
+	# that is not a plain hex address must be rejected to avoid command injection.
+	vdma_base = None
+	if arg.startswith('capture:'):
+		vdma_base = arg[len('capture:'):]
+		if not re.fullmatch(r'0x[0-9A-Fa-f]{1,8}', vdma_base):
+			print("Invalid VDMA base address. Expected a hex value such as 0x43000000.")
+			sys.exit(1)
+
 	# Find the user's current board session
 	board = None
 	boardclass = None
@@ -70,8 +83,10 @@ if arg == 'capture':
 	sys.stderr.write("Capturing framebuffer from board '{}'...\n".format(board))
 	sys.stderr.flush()
 
-	# Run capture on boardserver: xsdb output goes to stderr (visible to user), JPEG to stdout
-	cmd = "cd /tmp && /opt/xsct/bin/xsdb /vlab/capture_fast.tcl 1>&2 && cat output.jpg && rm -f output.jpg"
+	# Run capture on boardserver: xsdb output goes to stderr (visible to user), JPEG to stdout.
+	# vdma_base has already been validated against a strict hex pattern above.
+	vdma_arg = " {}".format(vdma_base) if vdma_base else ""
+	cmd = "cd /tmp && /opt/xsct/bin/xsdb /vlab/capture_fast.tcl{} 1>&2 && cat output.jpg && rm -f output.jpg".format(vdma_arg)
 	ssh_cmd = "ssh -q -o \"StrictHostKeyChecking no\" -i {} -p {} {} \"{}\"".format(
 		keyfile, port, target, cmd)
 	result = subprocess.run(ssh_cmd, shell=True)

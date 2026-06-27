@@ -27,7 +27,7 @@ from subprocess import Popen, PIPE
 ############################
 # Update version string here and in 'current_version' file when updating this script
 # Version number must be in 'x.y.z' format
-current_version = '1.2.4'
+current_version = '1.2.5'
 current_branch = 'master'
 ############################
 
@@ -58,6 +58,9 @@ parser.add_argument('-c', '--capture', default=False, action='store_true',
                     help="Capture the FPGA framebuffer and save as JPEG.")
 parser.add_argument('-o', '--output', nargs=1,
                     help="Output filename for capture (default: capture_YYYYMMDD_HHMMSS.jpg)")
+parser.add_argument('--vdma', nargs=1,
+                    help="Base address of the framebuffer VDMA peripheral for --capture, e.g. 0x43000000 "
+                         "(default: 0x43000000).")
 parsed = parser.parse_args()
 
 error_info = "Read the instructions at\n" \
@@ -102,7 +105,13 @@ if parsed.capture:
 	           '-p', parsed.port[0]]
 	if parsed.user is not None:
 		ssh_cmd.extend(['-l', parsed.user[0]])
-	ssh_cmd.extend([parsed.relay[0], 'capture'])
+	# Encode an optional VDMA base address into the relay command token (capture[:vdma]),
+	# mirroring the boardclass:port:serial form used for board sessions. The relay validates
+	# the value before use; omitting it lets the boardserver fall back to its built-in default.
+	if parsed.vdma is not None:
+		ssh_cmd.extend([parsed.relay[0], 'capture:{}'.format(parsed.vdma[0])])
+	else:
+		ssh_cmd.extend([parsed.relay[0], 'capture'])
 
 	if parsed.verbose:
 		print("Capture ssh command: {}".format(ssh_cmd))
