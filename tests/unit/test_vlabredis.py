@@ -230,3 +230,50 @@ class TestHelpers:
         assert not db.sismember("vlab:boardclass:vlab_test:boards", "BOARD001")
         assert db.zscore("vlab:boardclass:vlab_test:availableboards", "BOARD001") is None
         assert db.get("vlab:board:BOARD001:server") is None
+
+    def test_remove_board_keeps_hwtest_failure(self, populated_redis):
+        # A board can be removed and re-registered without anything having tested it,
+        # so a recorded failure must survive, or a known-bad board silently returns
+        # to service.
+        db = populated_redis
+        vlabredis.record_hwtest_result(db, "BOARD001", "fail", "no PS on the JTAG chain")
+        vlabredis.remove_board(db, "BOARD001")
+        assert db.get("vlab:board:BOARD001:hwtest:status") == "fail"
+        assert db.get("vlab:board:BOARD001:hwtest:message") == "no PS on the JTAG chain"
+        assert db.get("vlab:board:BOARD001:hwtest:testing") is None
+
+
+@pytest.mark.unit
+class TestHardwareTestState:
+    def test_withdraw_board(self, populated_redis):
+        db = populated_redis
+        assert vlabredis.withdraw_board(db, "BOARD001", "vlab_test") is True
+        assert db.zscore("vlab:boardclass:vlab_test:availableboards", "BOARD001") is None
+        assert db.zscore("vlab:boardclass:vlab_test:unlockedboards", "BOARD001") is None
+
+    def test_withdraw_board_not_in_pools(self, populated_redis):
+        db = populated_redis
+        vlabredis.withdraw_board(db, "BOARD001", "vlab_test")
+        assert vlabredis.withdraw_board(db, "BOARD001", "vlab_test") is False
+
+    def test_return_board(self, populated_redis):
+        db = populated_redis
+        vlabredis.withdraw_board(db, "BOARD001", "vlab_test")
+        vlabredis.return_board(db, "BOARD001", "vlab_test")
+        assert db.zscore("vlab:boardclass:vlab_test:availableboards", "BOARD001") is not None
+        assert db.zscore("vlab:boardclass:vlab_test:unlockedboards", "BOARD001") is not None
+
+    def test_record_hwtest_result(self, populated_redis):
+        db = populated_redis
+        vlabredis.record_hwtest_result(db, "BOARD001", "pass", "OK")
+        assert db.get("vlab:board:BOARD001:hwtest:status") == "pass"
+        assert db.get("vlab:board:BOARD001:hwtest:message") == "OK"
+        assert int(db.get("vlab:board:BOARD001:hwtest:time")) <= int(time.time())
+
+    def test_board_failed_hwtest(self, populated_redis):
+        db = populated_redis
+        assert vlabredis.board_failed_hwtest(db, "BOARD001") is False
+        vlabredis.record_hwtest_result(db, "BOARD001", "fail", "no serial output")
+        assert vlabredis.board_failed_hwtest(db, "BOARD001") is True
+        vlabredis.record_hwtest_result(db, "BOARD001", "pass", "OK")
+        assert vlabredis.board_failed_hwtest(db, "BOARD001") is False

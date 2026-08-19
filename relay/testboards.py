@@ -59,21 +59,6 @@ def board_is_idle(db, board):
     return session_user is None and lock_user is None
 
 
-def withdraw_board(db, board, bc):
-    """Remove board from both availableboards and unlockedboards.
-    Returns True if it was in at least one set."""
-    r1 = db.zrem("vlab:boardclass:{}:availableboards".format(bc), board)
-    r2 = db.zrem("vlab:boardclass:{}:unlockedboards".format(bc), board)
-    return (r1 + r2) > 0
-
-
-def return_board(db, board, bc):
-    """Return board to both availableboards and unlockedboards."""
-    now = int(time.time())
-    db.zadd("vlab:boardclass:{}:availableboards".format(bc), {board: now})
-    db.zadd("vlab:boardclass:{}:unlockedboards".format(bc), {board: now})
-
-
 def program_and_read_serial(server, port):
     """Program the test bitstream and capture serial output in one SSH session.
 
@@ -105,13 +90,6 @@ def reset_board(db, board, server, port):
             ssh_to_board(server, port, cmd, timeout=30)
     except Exception as e:
         log("Exception resetting board {}: {}".format(board, e))
-
-
-def record_result(db, board, status, message):
-    """Record hardware test result in Redis."""
-    db.set("vlab:board:{}:hwtest:status".format(board), status)
-    db.set("vlab:board:{}:hwtest:time".format(board), int(time.time()))
-    db.set("vlab:board:{}:hwtest:message".format(board), message)
 
 
 def test_board(db, board, bc):
@@ -150,7 +128,7 @@ def test_board(db, board, bc):
         if not ok:
             message = "Programming failed: {}".format(err_msg)
             log("Board {} FAIL: {}".format(board, message))
-            record_result(db, board, "fail", message)
+            record_hwtest_result(db, board, "fail", message)
             reset_board(db, board, server, port)
             return False
 
@@ -168,7 +146,7 @@ def test_board(db, board, bc):
         log("Board {} FAIL: {}".format(board, message))
 
     # Record result
-    record_result(db, board, "pass" if passed else "fail", message)
+    record_hwtest_result(db, board, "pass" if passed else "fail", message)
 
     # Always reset the board
     reset_board(db, board, server, port)

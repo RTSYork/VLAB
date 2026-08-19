@@ -17,6 +17,7 @@ import os
 import socket
 import subprocess
 import sys
+import time
 import redis
 
 CONFIG_FILE = '/opt/VLAB/boardhost.conf'
@@ -131,15 +132,32 @@ subprocess.check_output(['docker', 'exec', container_name, '/bin/sh', '-c', cmd]
 if db.get("vlab:knownboard:{}:reset".format(serial)) == "true":
 	cmd = "/opt/xsct/bin/xsdb /vlab/reset.tcl"
 	log.info("Resetting FPGA configuration on board {}...".format(serial))
-	subprocess.check_output(['docker', 'exec', container_name, '/bin/sh', '-c', cmd])
+	try:
+		subprocess.check_output(['docker', 'exec', container_name, '/bin/sh', '-c', cmd])
+	except subprocess.CalledProcessError as e:
+		# If reset.tcl exits non-zero then register the board but record the failure so that it is not made available
+		log.critical("Resetting board {} failed with code {}.".format(serial, e.returncode))
+		db.set("vlab:board:{}:hwtest:status".format(serial), "fail")
+		db.set("vlab:board:{}:hwtest:time".format(serial), int(time.time()))
+		db.set("vlab:board:{}:hwtest:message".format(serial),
+		       "reset.tcl failed with code {} when the board was attached".format(e.returncode))
 
 # Finally, we register our new board with the redis server ourselves as well
 
 # Set up our boardclass
 db.sadd("vlab:boardclasses", boardclass)
 db.sadd("vlab:boardclass:{}:boards".format(boardclass), serial)
-db.zadd("vlab:boardclass:{}:availableboards".format(boardclass), {serial: 0})
-db.zadd("vlab:boardclass:{}:unlockedboards".format(boardclass), {serial: 0})
+
+# Only make the board allocatable if it is not known to be broken. A board that has
+# failed its hardware test (or the reset above) stays registered but out of the pools,
+# and returns to service only when it passes a run of testboards.py on the relay.
+if db.get("vlab:board:{}:hwtest:status".format(serial)) == "fail":
+	log.critical("Board {} has failed its hardware test, so is registered but not made available.".format(serial))
+	db.zrem("vlab:boardclass:{}:availableboards".format(boardclass), serial)
+	db.zrem("vlab:boardclass:{}:unlockedboards".format(boardclass), serial)
+else:
+	db.zadd("vlab:boardclass:{}:availableboards".format(boardclass), {serial: 0})
+	db.zadd("vlab:boardclass:{}:unlockedboards".format(boardclass), {serial: 0})
 
 # Set up our board with details provided. Remove any locks and sessions.
 db.set("vlab:board:{}:user".format(serial), "root")

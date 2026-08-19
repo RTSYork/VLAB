@@ -20,9 +20,32 @@ from vlabredis import *
 
 KEYS_DIR = "/vlab/keys/"
 
+# How many times to try resetting a board before giving up and withdrawing it
+RESET_ATTEMPTS = 2
+# reset.tcl returns this when the board is present but cannot be programmed
+RESET_RC_UNUSABLE = 2
+
 logging.basicConfig(
 	filename='/vlab/log/access.log', level=logging.INFO, format='%(asctime)s ; %(levelname)s ; %(name)s ; %(message)s')
 log = logging.getLogger(os.path.basename(sys.argv[0]))
+
+
+def reset_board(board, keyfile, port, target, attempts=RESET_ATTEMPTS):
+	"""
+	Run boardserver/reset.tcl to try to clear and reset the board, retrying up to
+	'attempts' times. Returns the return code of the last attempt, which is 0 on success.
+	"""
+	cmd = "/opt/xsct/bin/xsdb /vlab/reset.tcl"
+	ssh_cmd = "ssh -q -o \"StrictHostKeyChecking no\" -i {} -p {} {} \"{}\"".format(keyfile, port, target, cmd)
+	rc = -1
+	for attempt in range(1, attempts + 1):
+		rc = subprocess.run(ssh_cmd, shell=True).returncode
+		if rc == 0:
+			return 0
+		log.warning("RESETFAIL: {}, rc={}, attempt {} of {}".format(board, rc, attempt, attempts))
+		if attempt < attempts:
+			print("Reset of board '{}' failed. Retrying...".format(board))
+	return rc
 
 db = connect_to_redis('localhost')
 
@@ -222,11 +245,26 @@ keyfile = "{}{}".format(KEYS_DIR, "id_rsa")
 target = "root@{}".format(server)
 
 if db.get("vlab:knownboard:{}:reset".format(board)) == "true":
-	cmd = "/opt/xsct/bin/xsdb /vlab/reset.tcl"
-	ssh_cmd = "ssh -q -o \"StrictHostKeyChecking no\" -i {} -p {} {} \"{}\""\
-		.format(keyfile, port, target, cmd)
 	print("Resetting board...")
-	subprocess.run(ssh_cmd, shell=True)
+	rc = reset_board(board, keyfile, port, target)
+
+	if rc != 0:
+		# The board cannot be put into a usable state, so there is no point handing it
+		# to the user. Mark it failed so that checkboards.py will not quietly return it to the pool. It
+		# comes back into service only if it passes a later run of testboards.py.
+		log.critical("RESETFAIL: {}, {}:{}, rc={}, withdrawing board".format(username, boardclass, board, rc))
+		unlock_board_if_user_time(db, board, boardclass, username, session_start_time)
+		end_session_if_user_time(db, board, boardclass, username, session_start_time)
+		withdraw_board(db, board, boardclass)
+		record_hwtest_result(db, board, "fail", "reset.tcl failed with code {} when {} connected".format(rc, username))
+		print("")
+		print("ERROR: board '{}' could not be reset and is not usable.".format(board))
+		if rc == RESET_RC_UNUSABLE:
+			print("Its programmable logic is visible over JTAG but its processing system is not,")
+			print("so it cannot be programmed from Vivado or Vitis.")
+		print("The board has been taken out of service and the failure logged.")
+		print("Please reconnect to be allocated a different board.")
+		sys.exit(1)
 
 screenrc = "defhstatus \\\"{} (VLAB Shell)\\\"\\ncaption always\\ncaption string \\\" VLAB Shell [ User: {} | Lock " \
            "expires: {} | Board class: {} | Board serial: {} | Server: {} ]\\\""\
@@ -265,16 +303,24 @@ subprocess.run("stty sane", shell=True)
 
 print("User disconnected. Cleaning up...")
 
+reset_failed = False
 if db.get("vlab:knownboard:{}:reset".format(board)) == "true":
-	cmd = "/opt/xsct/bin/xsdb /vlab/reset.tcl"
-	ssh_cmd = "ssh -q -o \"StrictHostKeyChecking no\" -i {} -p {} {} \"{}\""\
-		.format(keyfile, port, target, cmd)
 	print("Resetting board...")
-	subprocess.run(ssh_cmd, shell=True)
+	if reset_board(board, keyfile, port, target) != 0:
+		# Board has become unusable during the session so treat it as above
+		reset_failed = True
+		log.critical("RESETFAIL: {}, {}:{}, on disconnect".format(username, boardclass, board))
+		print("This board could not be reset and has been taken out of service.")
 
 print("Releasing lock and ending session...")
 if unlock_board_if_user_time(db, board, boardclass, username, session_start_time):
 	log.info("RELEASE: {}, {}:{}".format(username, boardclass, board))
 if end_session_if_user_time(db, board, boardclass, username, session_start_time):
 	log.info("END: {}, {}:{}".format(username, boardclass, board))
+
+if reset_failed:
+	withdraw_board(db, board, boardclass)
+	record_hwtest_result(db, board, "fail",
+	                     "reset.tcl failed when {} disconnected".format(username))
+
 print("Disconnected successfully.")

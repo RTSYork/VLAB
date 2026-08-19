@@ -1,2 +1,5 @@
-* * * * * /vlab/checkboards.py -s -k >> /vlab/log/relay.log 2>&1
-0 */4 * * * /vlab/testboards.py >> /vlab/log/relay.log 2>&1
+# Installed as root's crontab by the Dockerfile, so these lines have no user field.
+# The scripts are invoked via python3 rather than directly so that a missing execute
+# bit on the file cannot silently stop the job from ever running.
+* * * * * python3 /vlab/checkboards.py -s -k >> /vlab/log/relay.log 2>&1
+0 */4 * * * python3 /vlab/testboards.py >> /vlab/log/relay.log 2>&1

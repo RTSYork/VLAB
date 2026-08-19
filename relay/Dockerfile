@@ -17,8 +17,8 @@ RUN npm install frontail -g
 EXPOSE 9001
 
 # Add files
-ADD crontab /etc/cron.d/vlab-cron
-RUN crontab /etc/cron.d/vlab-cron
+ADD crontab /vlab/crontab
+RUN crontab /vlab/crontab
 ADD supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 ADD *.py /vlab/
 

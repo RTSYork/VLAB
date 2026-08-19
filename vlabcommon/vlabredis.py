@@ -139,10 +139,43 @@ def remove_board(db, b):
 	db.delete("vlab:board:{}:session:username".format(b))
 	db.delete("vlab:board:{}:session:starttime".format(b))
 	db.delete("vlab:board:{}:session:pingtime".format(b))
-	db.delete("vlab:board:{}:hwtest:status".format(b))
-	db.delete("vlab:board:{}:hwtest:time".format(b))
-	db.delete("vlab:board:{}:hwtest:message".format(b))
+	# The hwtest status is deliberately kept. The status is overwritten by the next hardware test.
 	db.delete("vlab:board:{}:hwtest:testing".format(b))
+
+
+def withdraw_board(db, board, boardclass):
+	"""
+	Remove a board from both the available and unlocked pools so that it cannot be
+	allocated. Returns True if it was in at least one of them.
+	"""
+	r1 = db.zrem("vlab:boardclass:{}:availableboards".format(boardclass), board)
+	r2 = db.zrem("vlab:boardclass:{}:unlockedboards".format(boardclass), board)
+	return (r1 + r2) > 0
+
+
+def return_board(db, board, boardclass):
+	"""
+	Return a board to both the available and unlocked pools.
+	"""
+	now = int(time.time())
+	db.zadd("vlab:boardclass:{}:availableboards".format(boardclass), {board: now})
+	db.zadd("vlab:boardclass:{}:unlockedboards".format(boardclass), {board: now})
+
+
+def record_hwtest_result(db, board, status, message):
+	"""
+	Record the outcome of a hardware test ('pass' or 'fail') for a board.
+	"""
+	db.set("vlab:board:{}:hwtest:status".format(board), status)
+	db.set("vlab:board:{}:hwtest:time".format(board), int(time.time()))
+	db.set("vlab:board:{}:hwtest:message".format(board), message)
+
+
+def board_failed_hwtest(db, board):
+	"""
+	True if the board is currently marked as having failed its hardware test.
+	"""
+	return db.get("vlab:board:{}:hwtest:status".format(board)) == "fail"
 
 
 def _zpopmin(db, zset):
