@@ -53,6 +53,40 @@ The terminal uses [GNU screen](https://www.gnu.org/software/screen/) so to disco
 
 By default, the relay server will allocate boards using a *least-recently-unlocked* scheme to balance load, i.e. whichever board has the oldest unlock time will be preferred.
 Boards that have been attached to the system but never allocated to a user will be used preferentially over those that have previously been used.
+### Driving a board from a script
+
+The default session hands the terminal to `screen`, which is convenient by hand but
+cannot be automated: there is no way to read the serial output programmatically, and
+the session lasts exactly as long as the terminal.
+
+For scripted use, `--no-terminal` allocates and tunnels a board exactly as normal but
+starts no terminal, which leaves the board's serial port free to be captured
+separately. The session lasts as long as the client process runs.
+
+```
+./vlab.py -k keyfile --no-terminal &
+```
+
+It prints `VLAB_READY:<port>` once the board has been allocated and reset and the
+hardware server is forwarded, so a script can wait for that one line rather than
+guessing at a delay. Everything before it is progress output. Killing the process
+ends the session and releases the lock.
+
+With a session held open, the serial output can be captured:
+
+```
+./vlab.py -k keyfile --capture-serial 20
+```
+
+This reads the board's serial port for the given number of seconds and writes the
+bytes to stdout, or to a file given with `-o`. Progress and errors go to stderr, so
+the two can be separated. A typical test starts the capture, programs the board over
+the forwarded hardware server port, and then inspects what the capture returned.
+
+`--capture-serial` needs a session started with `--no-terminal`. If an interactive
+session is holding the serial port it refuses rather than returning a partial
+capture, since two readers on one serial device split the bytes between them.
+
 
 
 ## Web Dashboard

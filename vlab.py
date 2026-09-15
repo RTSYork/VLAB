@@ -17,17 +17,19 @@ Ian Gray, 2017-2026
 
 import argparse
 import os
+import shlex
+import signal
 import socket
 import sys
 import time
 import urllib.request
 import urllib.error
-from subprocess import Popen, PIPE
+from subprocess import Popen, PIPE, DEVNULL
 
 ############################
 # Update version string here and in 'current_version' file when updating this script
 # Version number must be in 'x.y.z' format
-current_version = '1.2.5'
+current_version = '1.3.0'
 current_branch = 'master'
 ############################
 
@@ -61,6 +63,13 @@ parser.add_argument('-o', '--output', nargs=1,
 parser.add_argument('--vdma', nargs=1,
                     help="Base address of the framebuffer VDMA peripheral for --capture, e.g. 0x43000000 "
                          "(default: 0x43000000).")
+parser.add_argument('-n', '--no-terminal', default=False, action='store_true',
+                    help="Hold the board and the port forward open without starting a terminal. "
+                         "Leaves the board's serial port free for --capture-serial. For scripting.")
+parser.add_argument('--capture-serial', nargs=1, metavar='SECONDS',
+                    help="Capture the board's serial output for the given number of seconds and write "
+                         "it to stdout, or to --output if given. Needs a session started with "
+                         "--no-terminal.")
 parsed = parser.parse_args()
 
 error_info = "Read the instructions at\n" \
@@ -140,6 +149,39 @@ if parsed.capture:
 	with open(filename, 'wb') as f:
 		f.write(stdout)
 	print("Saved to {} ({} bytes)".format(filename, len(stdout)))
+	sys.exit(0)
+
+# Handle serial capture mode. Like --capture this is a one-shot command against a
+# session the user already holds, so it needs no port forward of its own.
+if parsed.capture_serial:
+	seconds = parsed.capture_serial[0]
+	if not seconds.isdigit() or int(seconds) < 1:
+		err("--capture-serial takes a whole number of seconds.")
+
+	ssh_cmd = ['ssh', '-oPasswordAuthentication=no', '-i', parsed.key[0],
+	           '-p', parsed.port[0]]
+	if parsed.user is not None:
+		ssh_cmd.extend(['-l', parsed.user[0]])
+	ssh_cmd.extend([parsed.relay[0], 'serial:{}'.format(seconds)])
+
+	if parsed.verbose:
+		print("Serial capture ssh command: {}".format(ssh_cmd), file=sys.stderr)
+
+	# Only the captured bytes go to stdout, so that the caller can redirect them.
+	# The relay writes its own progress and errors to stderr, which passes through.
+	proc = Popen(ssh_cmd, stdout=PIPE)
+	captured, _ = proc.communicate()
+
+	if proc.returncode != 0:
+		sys.exit(proc.returncode)
+
+	if parsed.output:
+		with open(parsed.output[0], 'wb') as f:
+			f.write(captured)
+		print("Saved {} bytes to {}".format(len(captured), parsed.output[0]), file=sys.stderr)
+	else:
+		sys.stdout.buffer.write(captured)
+		sys.stdout.buffer.flush()
 	sys.exit(0)
 
 # Check that the requested ports are free to use
@@ -236,6 +278,11 @@ if parsed.serial is not None:
 else:
 	relay_command = "{}:{}".format(parsed.board[0], ephemeral_port)
 
+# Ask the relay to allocate and tunnel as usual but not to start a terminal, so
+# that the board's serial port stays free for --capture-serial.
+if parsed.no_terminal:
+	relay_command = "noterm:{}".format(relay_command)
+
 
 ssh_cmd = "ssh -L {}:localhost:{} -o PasswordAuthentication=no -o ExitOnForwardFailure=yes " \
           "-e none -i {} {} -p {} -tt {} {}"\
@@ -252,4 +299,48 @@ ssh_cmd = "ssh -L {}:localhost:{} -o PasswordAuthentication=no -o ExitOnForwardF
 if parsed.verbose:
 	print("Second ssh command: {}".format(ssh_cmd))
 
-os.system(ssh_cmd)
+if not parsed.no_terminal:
+	os.system(ssh_cmd)
+	sys.exit(0)
+
+# Not shell=True: the board is released when ssh disconnects, so this process must
+# be able to signal ssh itself rather than an intervening /bin/sh.
+proc = Popen(shlex.split(ssh_cmd), stdin=DEVNULL, stdout=PIPE, bufsize=1, universal_newlines=True)
+
+
+def end_session(signum=None, frame=None):
+	if proc.poll() is None:
+		proc.terminate()
+
+
+# A script will stop this with SIGTERM, and a closing terminal sends SIGHUP.
+# Either way the board must be handed back rather than left locked.
+for _sig in (signal.SIGTERM, signal.SIGHUP):
+	signal.signal(_sig, end_session)
+
+ready = False
+try:
+	for line in proc.stdout:
+		line = line.rstrip()
+		if not ready and line.endswith("VLAB_SESSION_READY"):
+			ready = True
+			print("VLAB_READY:{}".format(local_port), flush=True)
+			print("Board ready. hw_server is forwarded to localhost:{}.".format(local_port), flush=True)
+			print("Leave this running while you use the board; the lock is released when it exits.", flush=True)
+			continue
+		if line:
+			print(line, flush=True)
+except KeyboardInterrupt:
+	pass
+finally:
+	end_session()
+	try:
+		proc.wait(timeout=30)
+	except Exception:
+		proc.kill()
+		proc.wait()
+
+if not ready:
+	err("The board session never became ready.")
+
+sys.exit(proc.returncode)

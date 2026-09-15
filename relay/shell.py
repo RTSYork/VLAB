@@ -24,10 +24,25 @@ KEYS_DIR = "/vlab/keys/"
 RESET_ATTEMPTS = 2
 # reset.tcl returns this when the board is present but cannot be programmed
 RESET_RC_UNUSABLE = 2
+# Longest serial capture a client may ask for, in seconds
+MAX_SERIAL_CAPTURE = 300
 
 logging.basicConfig(
 	filename='/vlab/log/access.log', level=logging.INFO, format='%(asctime)s ; %(levelname)s ; %(name)s ; %(message)s')
 log = logging.getLogger(os.path.basename(sys.argv[0]))
+
+
+def find_session_board(db, username):
+	"""
+	Return (board, boardclass) for the user's current board session, or (None, None)
+	if they do not have one. Used by the commands that act on a session the user
+	already holds, rather than allocating a board of their own.
+	"""
+	for bc in db.smembers("vlab:boardclasses"):
+		for b in db.smembers("vlab:boardclass:{}:boards".format(bc)):
+			if db.get("vlab:board:{}:session:username".format(b)) == username:
+				return b, bc
+	return None, None
 
 
 def reset_board(board, keyfile, port, target, attempts=RESET_ATTEMPTS):
@@ -79,18 +94,7 @@ if arg == 'capture' or arg.startswith('capture:'):
 			print("Invalid VDMA base address. Expected a hex value such as 0x43000000.")
 			sys.exit(1)
 
-	# Find the user's current board session
-	board = None
-	boardclass = None
-	for bc in db.smembers("vlab:boardclasses"):
-		for b in db.smembers("vlab:boardclass:{}:boards".format(bc)):
-			if db.get("vlab:board:{}:session:username".format(b)) == username:
-				board = b
-				boardclass = bc
-				break
-		if board:
-			break
-
+	board, boardclass = find_session_board(db, username)
 	if board is None:
 		print("You don't have an active board session. Connect with vlab.py first.")
 		sys.exit(1)
@@ -115,7 +119,55 @@ if arg == 'capture' or arg.startswith('capture:'):
 	result = subprocess.run(ssh_cmd, shell=True)
 	sys.exit(result.returncode)
 
-# Otherwise the arg should be of the form boardclass:port, or boardclass:port:serial to request a specific board
+# Is the user requesting a capture of the board's serial output?
+if arg.startswith('serial:'):
+	duration = arg[len('serial:'):]
+	if not re.fullmatch(r'[0-9]{1,3}', duration) or not 1 <= int(duration) <= MAX_SERIAL_CAPTURE:
+		# stdout carries the captured bytes for this command, so everything meant
+		# for a human goes to stderr or the caller cannot tell it from serial data.
+		sys.stderr.write("Invalid duration. Expected a whole number of seconds from 1 to {}.\n".format(
+			MAX_SERIAL_CAPTURE))
+		sys.exit(1)
+
+	board, boardclass = find_session_board(db, username)
+	if board is None:
+		sys.stderr.write("You don't have an active board session. "
+		                 "Connect with vlab.py --no-terminal first.\n")
+		sys.exit(1)
+
+	board_details = get_board_details(db, board, ["server", "port"])
+	server = board_details['server']
+	port = board_details['port']
+
+	keyfile = "{}{}".format(KEYS_DIR, "id_rsa")
+	target = "root@{}".format(server)
+
+	log.info("SERIAL: {}, {}:{}, {}s".format(username, boardclass, board, duration))
+	sys.stderr.write("Capturing {}s of serial output from board '{}'...\n".format(duration, board))
+	sys.stderr.flush()
+
+	# Serial bytes go to stdout
+	# 'killall -s 0' just reports whether a matching process exists
+	cmd = ("if killall -q -s 0 screen SCREEN 2>/dev/null; then "
+	       "echo 'A terminal session is holding /dev/ttyFPGA. "
+	       "Reconnect with --no-terminal to capture serial output.' >&2; exit 3; fi; "
+	       "stty -F /dev/ttyFPGA 115200 raw -echo; "
+	       "timeout {} cat /dev/ttyFPGA").format(duration)
+	ssh_cmd = "ssh -q -o \"StrictHostKeyChecking no\" -i {} -p {} {} \"{}\"".format(
+		keyfile, port, target, cmd)
+	result = subprocess.run(ssh_cmd, shell=True)
+	# timeout(1) exits 124 when it stops cat at the end of the window
+	sys.exit(0 if result.returncode == 124 else result.returncode)
+
+# Otherwise this is a board session request.
+#
+# A 'noterm:' prefix asks for a session with no interactive terminal
+no_terminal = False
+if arg.startswith('noterm:'):
+	no_terminal = True
+	arg = arg[len('noterm:'):]
+
+# The rest should be of the form boardclass:port, or boardclass:port:serial to request a specific board
 args = arg.split(":")
 if len(args) < 2:
 	print("Argument should be of the form boardclass:port")
@@ -266,14 +318,18 @@ if db.get("vlab:knownboard:{}:reset".format(board)) == "true":
 		print("Please reconnect to be allocated a different board.")
 		sys.exit(1)
 
-screenrc = "defhstatus \\\"{} (VLAB Shell)\\\"\\ncaption always\\ncaption string \\\" VLAB Shell [ User: {} | Lock " \
-           "expires: {} | Board class: {} | Board serial: {} | Server: {} ]\\\""\
-	.format(boardclass, username, lock_end, boardclass, board, server)
-cmd = "echo -e '{}' > /vlab/vlabscreenrc;" \
-      "screen -c /vlab/vlabscreenrc -qdRR - /dev/ttyFPGA 115200;" \
-      "killall -q screen;" \
-      "pkill -SIGINT -nx sshd"\
-	.format(screenrc)
+if no_terminal:
+	# Hold the session open without touching /dev/ttyFPGA
+	cmd = "echo VLAB_SESSION_READY; while true; do sleep 5; done"
+else:
+	screenrc = "defhstatus \\\"{} (VLAB Shell)\\\"\\ncaption always\\ncaption string \\\" VLAB Shell [ User: {} | Lock " \
+	           "expires: {} | Board class: {} | Board serial: {} | Server: {} ]\\\""\
+		.format(boardclass, username, lock_end, boardclass, board, server)
+	cmd = "echo -e '{}' > /vlab/vlabscreenrc;" \
+	      "screen -c /vlab/vlabscreenrc -qdRR - /dev/ttyFPGA 115200;" \
+	      "killall -q screen;" \
+	      "pkill -SIGINT -nx sshd"\
+		.format(screenrc)
 ssh_cmd = "ssh -q -4 {} -o \"StrictHostKeyChecking no\" -e none -i {} -p {} -tt {} \"{}\""\
 	.format(tunnel, keyfile, port, target, cmd)
 proc = subprocess.Popen(ssh_cmd, shell=True)
